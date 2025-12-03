@@ -7,8 +7,10 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+
 @Mapper
-public interface VideoMapper {
+public interface VideoMapper extends BaseMapper<Video> {
 
     @Select("SELECT * FROM vx_videos WHERE id = #{id}")
     Video selectById(Long id);
