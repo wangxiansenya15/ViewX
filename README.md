@@ -141,14 +141,14 @@ ViewX/
 ### 前置要求
 - JDK 17+
 - Maven 3.8+
-- PostgreSQL 16+
+- PostgreSQL 15+
 - Redis 7+
 - RabbitMQ 3.x
 - Node.js 18+ (前端)
 
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/your-username/ViewX.git
+git clone https://github.com/wangxiansenya15/ViewX.git
 cd ViewX
 ```
 
@@ -200,13 +200,13 @@ http://localhost:8080/swagger-ui/index.html
 
 ## 📅 开发路线图
 
-| 阶段 | 状态 | 主要内容 |
-|------|------|----------|
-| **v0.5** | ✅ 已完成 | 用户系统、基础架构、AI 接入、Redis/MQ |
-| **v0.6** | 🚧 进行中 | 视频上传、转码、HLS 播放 |
-| **v0.7** | 📅 计划中 | 评论业务逻辑、通知系统完善 |
-| **v0.8** | 📅 计划中 | 推荐系统（协同过滤 + 内容推荐） |
-| **v1.0** | 📅 计划中 | 前后端联调、部署上线 |
+| 阶段           | 状态 | 主要内容 |
+|--------------|------|----------|
+| **v0.0.1**   | ✅ 已完成 | 用户系统、基础架构、AI 接入、Redis/MQ |
+| **v0.12.2**  | 🚧 进行中 | 视频上传、转码、HLS 播放 |
+| **v0.12.31** | 📅 计划中 | 评论业务逻辑、通知系统完善 |
+| **v1.0.0**   | 📅 计划中 | 推荐系统（协同过滤 + 内容推荐） |
+| **v1.0.1**   | 📅 计划中 | 前后端联调、部署上线 |
 
 详细路线图请查看 [Project_Roadmap.md](docs/Project_Roadmap.md)
 
@@ -242,7 +242,7 @@ http://localhost:8080/swagger-ui/index.html
 
 ## ❤️ 致谢
 
-本项目受到 Bilibili、YouTube、抖音的启发。
+本项目受到 Bilibili、YouTube、Tiktok的启发。
 
 感谢以下开源项目：
 - Spring Boot / Spring Security
