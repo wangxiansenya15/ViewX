@@ -17,20 +17,10 @@
 
 <script setup lang="ts">
 import VideoCard from './VideoCard.vue'
-
-interface Video {
-  id: number
-  cover: string
-  title: string
-  author: string
-  views: string
-  duration: string
-  avatar: string
-  date?: string
-}
+import type { VideoVO } from '@/api'
 
 defineProps<{
-  videos: Video[]
+  videos: VideoVO[]
 }>()
 
 defineEmits(['open-video'])

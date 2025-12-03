@@ -47,32 +47,29 @@ import Login from './views/Login.vue'
 import Profile from './views/Profile.vue'
 import Settings from './views/Settings.vue'
 import SplashScreen from './components/SplashScreen.vue'
-import { authApi } from '@/api'
+import { authApi, videoApi, type VideoVO } from '@/api'
 
 // 状态管理
 const isLoading = ref(false)
 const isInitialLoad = ref(true)
 const loadPercent = ref(0)
 const activeTab = ref('home')
-const currentVideo = ref(null)
+const currentVideo = ref<VideoVO | null>(null)
 const showLoginModal = ref(false)
 const isLoggedIn = ref(false)
 const theme = ref<'light' | 'dark'>('dark') // Default to dark as per design
 const sidebarOpen = ref(false)
 
-// 静态数据
-const mockVideos = [
-  { id: 1, title: "沉浸式体验：在雨夜的东京街头漫步 8K HDR", author: "WalkJapan", views: "24万", date: "2天前", duration: "12:34", cover: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" },
-  { id: 2, title: "Apple Vision Pro 深度评测：空间计算的未来？", author: "TechReview", views: "89万", date: "5小时前", duration: "18:20", cover: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Tech" },
-  { id: 3, title: "【4K】2025 极简主义桌面搭建指南 Desk Setup", author: "Minimalist", views: "12万", date: "1周前", duration: "08:45", cover: "https://images.unsplash.com/photo-1486946255434-2466348c2166?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Desk" },
-  { id: 4, title: "Cyberpunk 2077: 往日之影 最终结局剧情向", author: "GameMaster", views: "55万", date: "3天前", duration: "45:10", cover: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Gamer" },
-  { id: 5, title: "十分钟学会 Vue 3 Composition API", author: "CodeWithMe", views: "6.7万", date: "2天前", duration: "10:05", cover: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Code" },
-  { id: 6, title: "如何在家做出米其林级别的惠灵顿牛排", author: "ChefGordon", views: "102万", date: "1天前", duration: "15:30", cover: "https://images.unsplash.com/photo-1600891964092-4316c288032e?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Food" },
-  { id: 7, title: "冰岛环岛自驾游 Vlog ep.1", author: "TravelTheWorld", views: "33万", date: "4天前", duration: "22:15", cover: "https://images.unsplash.com/photo-1476610182048-b716b8518aae?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Trip" },
-  { id: 8, title: "Lo-Fi Hip Hop Radio - Beats to Relax/Study to", author: "LofiGirl", views: "Live", date: "直播中", duration: "Live", cover: "https://images.unsplash.com/photo-1516280440614-6697288d5d38?w=800&q=80", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Music" }
-]
+const videos = ref<VideoVO[]>([])
 
-const videos = ref(mockVideos)
+const fetchVideos = async () => {
+  try {
+    const res = await videoApi.getFeed()
+    videos.value = res
+  } catch (e) {
+    console.error('Failed to fetch videos:', e)
+  }
+}
 
 // 方法
 const triggerLoad = (cb?: () => void) => {
@@ -100,7 +97,12 @@ const triggerLoad = (cb?: () => void) => {
 
 const handleTabChange = (tabId: string) => {
   if (activeTab.value !== tabId) {
-    triggerLoad(() => activeTab.value = tabId)
+    triggerLoad(() => {
+      activeTab.value = tabId
+      if (tabId === 'home') {
+        fetchVideos()
+      }
+    })
   }
 }
 
@@ -124,7 +126,7 @@ const toggleTheme = () => {
   document.documentElement.setAttribute('data-theme', theme.value)
 }
 
-const openVideo = (video: any) => {
+const openVideo = (video: VideoVO) => {
   triggerLoad(() => {
     currentVideo.value = video
   })
@@ -198,7 +200,9 @@ const toggleSidebar = () => {
 
 onMounted(() => {
   document.documentElement.setAttribute('data-theme', theme.value)
-  triggerLoad()
+  triggerLoad(() => {
+    fetchVideos()
+  })
   
   window.addEventListener('unauthorized', () => {
     isLoggedIn.value = false

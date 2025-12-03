@@ -3,7 +3,7 @@
     <!-- 封面容器 -->
     <div
       class="relative aspect-video rounded-xl overflow-hidden glass-card hover-spring shadow-lg hover:shadow-indigo-500/20">
-      <img :src="video.cover"
+      <img :src="video.thumbnailUrl"
         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy">
 
       <!-- 悬浮播放按钮 -->
@@ -18,22 +18,22 @@
       <!-- 时长标记 -->
       <div
         class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md text-[10px] px-1.5 py-0.5 rounded text-white font-medium border border-white/10">
-        {{ video.duration }}
+        {{ formatDuration(video.duration) }}
       </div>
     </div>
 
     <!-- 信息 -->
     <div class="flex gap-3 px-1">
-      <img :src="video.avatar" class="w-9 h-9 rounded-full border border-white/10 bg-gray-800">
+      <img :src="video.uploaderAvatar" class="w-9 h-9 rounded-full border border-white/10 bg-gray-800">
       <div class="flex flex-col gap-1">
         <h3
           class="text-sm font-bold text-[var(--text)] leading-tight line-clamp-2 group-hover:text-[var(--primary)] transition-colors">
           {{ video.title }}
         </h3>
         <div class="flex items-center gap-2 text-xs text-[var(--muted)]">
-          <span>{{ video.author }}</span>
+          <span>{{ video.uploaderNickname }}</span>
           <span class="w-0.5 h-0.5 rounded-full bg-[var(--muted)]"></span>
-          <span>{{ video.views }}观看</span>
+          <span>{{ video.viewCount }}观看</span>
         </div>
       </div>
     </div>
@@ -42,20 +42,16 @@
 
 <script setup lang="ts">
 import { Play } from 'lucide-vue-next'
+import type { VideoVO } from '@/api'
 
-interface Video {
-  id: number
-  cover: string
-  title: string
-  author: string
-  views: string
-  duration: string
-  avatar: string
-  date?: string
+const formatDuration = (seconds: number) => {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 defineProps<{
-  video: Video
+  video: VideoVO
 }>()
 
 defineEmits(['click'])

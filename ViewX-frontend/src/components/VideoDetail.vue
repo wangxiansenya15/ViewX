@@ -17,12 +17,12 @@
         <div class="flex-1 relative bg-black flex items-center justify-center group overflow-hidden">
           <!-- 环境光背景 -->
           <div class="absolute inset-0 opacity-30 blur-3xl scale-125 transition-all duration-1000"
-            :style="`background-image: url(${video.cover}); background-size: cover; background-position: center;`">
+            :style="`background-image: url(${video.thumbnailUrl}); background-size: cover; background-position: center;`">
           </div>
 
           <!-- 模拟播放器 -->
           <div class="relative w-full max-w-5xl aspect-video bg-black shadow-2xl overflow-hidden group/player">
-            <img :src="video.cover" class="w-full h-full object-contain opacity-90">
+            <img :src="video.thumbnailUrl" class="w-full h-full object-contain opacity-90">
 
             <!-- 弹幕层 -->
             <div class="absolute inset-0 overflow-hidden z-10 pointer-events-none mask-linear-gradient">
@@ -50,7 +50,7 @@
                 <div class="flex gap-4">
                   <Play class="w-6 h-6 fill-white" />
                   <Volume2 class="w-6 h-6" />
-                  <span class="text-sm font-medium">04:20 / {{ video.duration }}</span>
+                  <span class="text-sm font-medium">04:20 / {{ formatDuration(video.duration) }}</span>
                 </div>
                 <div class="flex gap-4">
                   <span class="text-sm font-bold border border-white/30 px-2 rounded">4K</span>
@@ -76,9 +76,9 @@
           <!-- UP主信息 -->
           <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
             <div class="flex items-center gap-3">
-              <img :src="video.avatar" class="w-10 h-10 rounded-full border border-indigo-500/30">
+              <img :src="video.uploaderAvatar" class="w-10 h-10 rounded-full border border-indigo-500/30">
               <div>
-                <h3 class="font-bold text-sm text-gray-100">{{ video.author }}</h3>
+                <h3 class="font-bold text-sm text-gray-100">{{ video.uploaderNickname }}</h3>
                 <p class="text-xs text-gray-400 mt-0.5">粉丝 58.2万</p>
               </div>
             </div>
@@ -98,7 +98,7 @@
               <div class="flex items-center gap-1 hover:text-blue-400 cursor-pointer transition-colors">
                 <MessageCircle class="w-4 h-4" /> 1,024
               </div>
-              <span class="ml-auto text-gray-600">{{ video.date }}</span>
+              <span class="ml-auto text-gray-600">{{ formatDate(video.publishedAt) }}</span>
             </div>
 
             <!-- AI 视频洞察区域 -->
@@ -175,10 +175,23 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { ArrowLeft, Play, Volume2, Maximize, Flame, MessageCircle, Sparkles, Loader2, Bot, Send } from 'lucide-vue-next'
 import { marked } from 'marked'
+import type { VideoVO } from '@/api'
 
 const props = defineProps<{
-  video: any
+  video: VideoVO
 }>()
+
+const formatDuration = (seconds: number) => {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return date.toLocaleDateString()
+}
 
 const emit = defineEmits(['close'])
 
@@ -272,7 +285,9 @@ const generateVideoInsight = async () => {
   if (!props.video || isGeneratingAI.value) return
   isGeneratingAI.value = true
 
-  const prompt = `你是 ViewX 视频平台的 AI 助手。请根据视频标题'${props.video.title}'和作者'${props.video.author}'，生成一段简短精彩的视频内容简介（50字以内）以及三个看点（bullet points）。请用中文回答，语气轻松吸引人，并适当使用 emoji。`
+  isGeneratingAI.value = true
+
+  const prompt = `你是 ViewX 视频平台的 AI 助手。请根据视频标题'${props.video.title}'和作者'${props.video.uploaderNickname}'，生成一段简短精彩的视频内容简介（50字以内）以及三个看点（bullet points）。请用中文回答，语气轻松吸引人，并适当使用 emoji。`
 
   aiSummary.value = await callGemini(prompt) as string
   isGeneratingAI.value = false
