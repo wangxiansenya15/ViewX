@@ -1,0 +1,69 @@
+{
+    "splash": {
+        "slogan": "沉浸式视频体验"
+    },
+    "auth": {
+        "backToHome": "返回首页",
+        "subtitle": "探索非凡视界",
+        "login": "登录",
+        "register": "注册",
+        "email": "邮箱",
+        "password": "密码",
+        "username": "用户名",
+        "rememberMe": "记住我",
+        "forgotPassword": "忘记密码？",
+        "signIn": "登录",
+        "createAccount": "创建账号",
+        "orContinueWith": "或者使用以下方式继续",
+        "noAccount": "还没有账号？",
+        "registerNow": "立即注册",
+        "hasAccount": "已有账号？",
+        "loginNow": "立即登录"
+    },
+    "sidebar": {
+        "home": "首页推荐",
+        "trending": "热门趋势",
+        "subs": "关注动态",
+        "library": "播放历史",
+        "settings": "设置",
+        "gemini": {
+            "title": "Gemini Power",
+            "desc": "体验 AI 驱动的视频洞察与即时互动。",
+            "more": "了解更多"
+        }
+    },
+    "settings": {
+        "title": "设置",
+        "subtitle": "管理您的偏好设置和账号安全",
+        "appearance": {
+            "title": "外观设置",
+            "darkMode": "深色模式",
+            "darkModeDesc": "切换应用程序的深色/浅色外观",
+            "language": "界面语言",
+            "languageDesc": "选择您偏好的显示语言"
+        },
+        "about": {
+            "title": "关于 ViewX",
+            "version": "当前版本",
+            "checkUpdate": "检查更新",
+            "browserInfo": "浏览器信息"
+        },
+        "security": {
+            "title": "账号安全",
+            "requireLogin": "需要登录",
+            "loginPlaceholder": "登录后即可管理账号安全与偏好设置",
+            "loginBtn": "立即登录",
+            "changePassword": "修改密码",
+            "changePasswordDesc": "定期修改密码以保护账号安全",
+            "change": "修改",
+            "2fa": "双重认证",
+            "2faDesc": "开启两步验证提高安全性",
+            "loginHistory": "登录历史",
+            "loginHistoryDesc": "查看最近的设备登录记录",
+            "viewRecord": "查看记录",
+            "deleteAccount": "注销账号",
+            "deleteAccountDesc": "永久删除您的账号和所有数据",
+            "delete": "注销"
+        }
+    }
+}

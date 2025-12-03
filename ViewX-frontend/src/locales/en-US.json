@@ -1,0 +1,69 @@
+{
+    "splash": {
+        "slogan": "Immersive Video Experience"
+    },
+    "auth": {
+        "backToHome": "Back to Home",
+        "subtitle": "Discover the extraordinary",
+        "login": "Login",
+        "register": "Register",
+        "email": "Email",
+        "password": "Password",
+        "username": "Username",
+        "rememberMe": "Remember me",
+        "forgotPassword": "Forgot Password?",
+        "signIn": "Sign In",
+        "createAccount": "Create Account",
+        "orContinueWith": "Or continue with",
+        "noAccount": "Don't have an account?",
+        "registerNow": "Register now",
+        "hasAccount": "Already have an account?",
+        "loginNow": "Login now"
+    },
+    "sidebar": {
+        "home": "Home",
+        "trending": "Trending",
+        "subs": "Subscriptions",
+        "library": "Library",
+        "settings": "Settings",
+        "gemini": {
+            "title": "Gemini Power",
+            "desc": "Experience AI-driven video insights.",
+            "more": "Learn More"
+        }
+    },
+    "settings": {
+        "title": "Settings",
+        "subtitle": "Manage your preferences and account security",
+        "appearance": {
+            "title": "Appearance",
+            "darkMode": "Dark Mode",
+            "darkModeDesc": "Toggle dark/light appearance",
+            "language": "Language",
+            "languageDesc": "Choose your preferred language"
+        },
+        "about": {
+            "title": "About ViewX",
+            "version": "Version",
+            "checkUpdate": "Check for Updates",
+            "browserInfo": "Browser Info"
+        },
+        "security": {
+            "title": "Account Security",
+            "requireLogin": "Login Required",
+            "loginPlaceholder": "Login to manage security and preferences",
+            "loginBtn": "Login Now",
+            "changePassword": "Change Password",
+            "changePasswordDesc": "Change password regularly for security",
+            "change": "Change",
+            "2fa": "Two-Factor Auth",
+            "2faDesc": "Enable 2FA for better security",
+            "loginHistory": "Login History",
+            "loginHistoryDesc": "View recent login devices",
+            "viewRecord": "View Records",
+            "deleteAccount": "Delete Account",
+            "deleteAccountDesc": "Permanently delete your account and data",
+            "delete": "Delete"
+        }
+    }
+}

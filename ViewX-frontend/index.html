@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="description" content="ViewX - 现代化的视频推荐平台，采用macOS毛玻璃设计风格" />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>ViewX - 视频推荐平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <style>
+      /* 防止页面加载时的闪烁 */
+      body {
+        visibility: hidden;
+      }
+      body.loaded {
+        visibility: visible;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+    <script>
+      // 页面加载完成后显示内容
+      window.addEventListener('load', () => {
+        document.body.classList.add('loaded');
+      });
+    </script>
+  </body>
+</html>

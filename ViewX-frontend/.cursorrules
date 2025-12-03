@@ -1,0 +1,41 @@
+# ViewX Project Rules
+
+## Technology Stack
+- **Framework**: Vue 3 (Composition API, `<script setup>`)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + SCSS (Theme variables)
+- **UI Library**: Element Plus
+- **Icons**: Lucide Vue Next
+- **Build Tool**: Vite
+
+## Coding Guidelines
+1. **Vue Components**:
+   - Use Composition API with `<script setup lang="ts">`.
+   - Order: `<template>`, `<script>`, `<style>`.
+   - Use `defineProps` and `defineEmits` with TypeScript interfaces.
+
+2. **Styling & Theming**:
+   - Use Tailwind CSS for layout and utilities.
+   - Use CSS variables (`var(--bg)`, `var(--text)`, etc.) for colors to support Light/Dark modes.
+   - Avoid hardcoded hex colors in components; use theme variables or Tailwind classes.
+
+3. **Internationalization (i18n)**:
+   - All user-facing text MUST be localized using `vue-i18n`.
+   - Add keys to `src/locales/zh-CN.json` and `src/locales/en-US.json`.
+   - Use `t('key.path')` in templates and scripts.
+
+4. **State Management**:
+   - Use `ref` and `computed` for local state.
+   - Ensure reactivity is preserved when destructuring.
+
+## Project Structure
+- `src/components`: Reusable UI components.
+- `src/views`: Page-level components.
+- `src/styles`: Global styles and theme definitions.
+- `src/locales`: Translation files.
+
+当你完成一次任务之后，及时出现文件修改，也不需要运行“npm run build”
+
+Always answer in Chinese.
+
+根据之前做出的修改，汇总为md文档（用中文）,写入docs文件夹
