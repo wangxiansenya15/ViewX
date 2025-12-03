@@ -1,0 +1,52 @@
+# ========================================
+# ViewX 公共配置 (所有环境共享)
+# ========================================
+
+# 应用端口号
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# ViewX 自定义配置
+viewx:
+  thread-pool:
+    core-pool-size: 4
+    max-pool-size: 10
+    queue-capacity: 200
+    keep-alive-seconds: 60
+    thread-name-prefix: "viewx-async-"
+
+# Spring 配置
+spring:
+  profiles:
+    active: dev  # 默认激活开发环境，生产环境启动时使用 --spring.profiles.active=prod
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 115MB
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      logic-delete-value: true      # 逻辑已删除值(默认为 1)
+      logic-not-delete-value: false # 逻辑未删除值(默认为 0)
+
+# Swagger 配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# JWT 配置
+jwt:
+  secret: fruit-mall-secret-key-for-authentication-256bits
+  expire: 864000  # 10天过期

@@ -1,0 +1,121 @@
+# ========================================
+# ViewX 生产环境配置
+# ========================================
+
+viewx:
+  frontend:
+    url: https://viewx.com  # 生产环境前端域名
+
+
+spring:
+  # 数据库配置 - 生产环境
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:viewx_db}?TimeZone=Asia/Shanghai
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}  # 生产环境必须通过环境变量传入
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 10
+      min-idle: 20
+      max-active: 50  # 生产环境增加连接数
+      connect-timeout: 3000
+      socket-timeout: 60000
+      transaction-query-timeout: 120
+      query-timeout: 30
+      remove-abandoned-timeout: 300
+      filters: wall,slf4j
+      wall:
+        enabled: true
+        config:
+          select-allow: true
+          select-limit: 1000
+          delete-where-none: true
+          update-where-none: true
+          metadata-perm: false
+
+  # Redis 配置 - 生产环境
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}  # 生产环境建议设置密码
+      database: 0
+      timeout: 5000
+
+  # 邮件配置 - 生产环境
+  mail:
+    host: ${MAIL_HOST:smtp.qq.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}  # 通过环境变量传入
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  # RabbitMQ 配置 - 生产环境
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD}  # 通过环境变量传入
+
+  # OAuth2 配置 - 生产环境
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: read:user,user:email
+#          gitee:
+#            client-id: ${GITEE_CLIENT_ID}
+#            client-secret: ${GITEE_CLIENT_SECRET}
+#            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+#            authorization-grant-type: authorization_code
+#            client-authentication-method: client_secret_post
+#            client-name: Gitee
+        provider:
+          github:
+            authorization-uri: https://github.com/login/oauth/authorize
+            token-uri: https://github.com/login/oauth/access_token
+            user-info-uri: https://api.github.com/user
+#          gitee:
+#            authorization-uri: https://gitee.com/oauth/authorize
+#            token-uri: https://gitee.com/oauth/token
+#            user-info-uri: https://gitee.com/api/v5/user
+#            user-name-attribute: name
+
+  # AI 配置 - 生产环境
+  ai:
+    openai:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${AI_API_KEY}  # 通过环境变量传入
+
+# 文件存储配置 - 生产环境
+file:
+  storage:
+    storage-type: ${STORAGE_TYPE:aliyun-oss}  # 生产环境建议使用OSS
+    base-url: ${STORAGE_BASE_URL:https://cdn.viewx.com}
+    local:
+      domain: ${STORAGE_DOMAIN:https://cdn.viewx.com/avatars/}
+      # upload-dir: /var/www/viewx/uploads
+
+# 日志配置 - 生产环境（只记录警告和错误）
+logging:
+  level:
+    root: WARN
+    com.flowbrain.viewx: INFO
+    org.springframework.security: WARN
+  file:
+    name: /var/log/viewx/application.log
+    max-size: 100MB
+    max-history: 30

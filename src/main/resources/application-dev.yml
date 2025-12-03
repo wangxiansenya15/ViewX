@@ -1,0 +1,118 @@
+# ========================================
+# ViewX 开发环境配置
+# ========================================
+
+viewx:
+  frontend:
+    url: http://localhost:5173  # 前端开发服务器地址
+
+spring:
+  # 数据库配置 - 开发环境
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/viewx_db?TimeZone=Asia/Shanghai
+    username: postgres
+    password: wjb202218
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 5
+      min-idle: 10
+      max-active: 20
+      connect-timeout: 3000
+      socket-timeout: 60000
+      transaction-query-timeout: 120
+      query-timeout: 30
+      remove-abandoned-timeout: 300
+      filters: wall,slf4j
+      wall:
+        enabled: true
+        config:
+          select-allow: true
+          select-limit: 1000
+          delete-where-none: true
+          update-where-none: true
+          metadata-perm: false
+
+  # Redis 配置 - 开发环境
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 1
+      timeout: 5000
+
+  # 邮件配置 - 开发环境
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: 2994512097@qq.com
+    password: uukovjierdwndfja  # QQ邮箱授权码
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
+  # RabbitMQ 配置 - 开发环境
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  # OAuth2 配置 - 开发环境
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:Ov23ligJIl04jqYKTlwO}
+            client-secret: ${GITHUB_CLIENT_SECRET:5f688a8ef190e0fd0ccf4f72f63010d4083ee3bf}
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: read:user,user:email
+#          gitee:
+#            client-id: ${GITEE_CLIENT_ID:your_gitee_client_id}
+#            client-secret: ${GITEE_CLIENT_SECRET:your_gitee_secret}
+#            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+#            authorization-grant-type: authorization_code
+#            client-authentication-method: client_secret_post
+#            client-name: Gitee
+        provider:
+          github:
+            authorization-uri: https://github.com/login/oauth/authorize
+            token-uri: https://github.com/login/oauth/access_token
+            user-info-uri: https://api.github.com/user
+#          gitee:
+#            authorization-uri: https://gitee.com/oauth/authorize
+#            token-uri: https://gitee.com/oauth/token
+#            user-info-uri: https://gitee.com/api/v5/user
+#            user-name-attribute: name
+
+  # AI 配置 - 开发环境
+  ai:
+    openai:
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${AI_API_KEY:sk-bba061162b434bd09e3577a0dc4fb332}
+      options:
+        models: qwen-max
+
+# 文件存储配置 - 开发环境
+file:
+  storage:
+    storage-type: local
+    base-url: http://localhost/viewx
+    upload-dir: ./uploads
+    local:
+      domain: http://localhost:80/avatars/
+      # upload-dir: /home/arthur/Desktop/FinalStage/ViewX/uploads
+
+# 日志配置 - 开发环境（详细日志）
+logging:
+  level:
+    com.flowbrain.viewx: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
