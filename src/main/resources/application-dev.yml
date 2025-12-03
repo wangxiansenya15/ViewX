@@ -45,8 +45,8 @@ spring:
   mail:
     host: smtp.qq.com
     port: 587
-    username: 2994512097@qq.com
-    password: uukovjierdwndfja  # QQ邮箱授权码
+    username: ${MAIL_USERNAME:your_email@qq.com}
+    password: ${MAIL_PASSWORD:your_mail_auth_code}  # QQ邮箱授权码
     properties:
       mail:
         smtp:
@@ -70,8 +70,8 @@ spring:
       client:
         registration:
           github:
-            client-id: ${GITHUB_CLIENT_ID:Ov23ligJIl04jqYKTlwO}
-            client-secret: ${GITHUB_CLIENT_SECRET:5f688a8ef190e0fd0ccf4f72f63010d4083ee3bf}
+            client-id: ${GITHUB_CLIENT_ID:your_github_client_id}
+            client-secret: ${GITHUB_CLIENT_SECRET:your_github_client_secret}
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             scope: read:user,user:email
 #          gitee:
@@ -96,7 +96,7 @@ spring:
   ai:
     openai:
       base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-      api-key: ${AI_API_KEY:sk-bba061162b434bd09e3577a0dc4fb332}
+      api-key: ${AI_API_KEY:your_dashscope_api_key}
       options:
         models: qwen-max
 

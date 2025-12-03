@@ -208,6 +208,13 @@
             <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
+        <!-- DotEnv - 自动加载 .env 文件 -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- swagger -->
         <dependency>
             <groupId>org.springdoc</groupId>
