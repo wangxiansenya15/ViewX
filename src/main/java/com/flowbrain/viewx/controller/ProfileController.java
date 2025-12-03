@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 用户资料控制器
@@ -87,8 +88,8 @@ public class ProfileController {
      */
     @PostMapping("/avatar")
     public Result<String> uploadAvatar(
-            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
-            Authentication authentication) {
+            @RequestParam("file") MultipartFile file,
+                                  Authentication authentication) {
 
         String username = authentication.getName();
         Long userId = getUserIdFromAuth(authentication);

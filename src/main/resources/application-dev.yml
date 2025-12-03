@@ -105,7 +105,7 @@ file:
   storage:
     storage-type: local
     base-url: http://localhost/viewx
-    upload-dir: ./uploads
+    upload-dir: #./uploads
     local:
       domain: http://localhost:80/avatars/
       # upload-dir: /home/arthur/Desktop/FinalStage/ViewX/uploads

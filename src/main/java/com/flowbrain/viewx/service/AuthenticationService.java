@@ -1,14 +1,15 @@
 package com.flowbrain.viewx.service;
 
+import com.flowbrain.viewx.common.RedisKeyConstants;
 import com.flowbrain.viewx.common.Result;
 import com.flowbrain.viewx.common.Role;
 import com.flowbrain.viewx.pojo.dto.UserDTO;
 import com.flowbrain.viewx.common.UserStatus;
 import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.util.JwtUtils;
-import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,6 +37,9 @@ public class AuthenticationService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private RedisTemplate<String, String> stringRedisTemplate;
 
     public Result<UserDTO> authenticate(UserDTO userDTO) {
         try {
@@ -86,14 +90,13 @@ public class AuthenticationService {
 
     /**
      * 验证验证码
-     * 检查用户输入的验证码是否与会话中存储的验证码匹配
+     * 从Redis中检查用户输入的验证码是否与存储的验证码匹配
      * 
      * @param email            用户邮箱
      * @param verificationCode 用户输入的验证码
-     * @param session          HTTP会话对象
      * @return 验证结果
      */
-    public Result<?> verifyCode(String email, String verificationCode, HttpSession session) {
+    public Result<?> verifyCode(String email, String verificationCode) {
         try {
             // 参数校验
             if (email == null || email.trim().isEmpty()) {
@@ -103,10 +106,12 @@ public class AuthenticationService {
                 return Result.error(Result.BAD_REQUEST, "验证码不能为空");
             }
 
-            // 从会话中获取存储的验证码
-            String storedCode = (String) session.getAttribute("verificationCode");
+            // 从Redis中获取存储的验证码
+            String redisKey = RedisKeyConstants.Captcha.getVerificationCodeKey(email);
+            String storedCode = stringRedisTemplate.opsForValue().get(redisKey);
+
             if (storedCode == null) {
-                log.warn("验证码验证失败: 会话中未找到验证码，邮箱: {}", email);
+                log.warn("验证码验证失败: Redis中未找到验证码，邮箱: {}", email);
                 return Result.error(Result.BAD_REQUEST, "验证码已过期或不存在，请重新获取");
             }
 
@@ -116,7 +121,10 @@ public class AuthenticationService {
                 return Result.error(Result.BAD_REQUEST, "验证码错误");
             }
 
-            log.info("验证码验证成功，邮箱: {}", email);
+            // 验证成功后立即删除验证码，防止重复使用
+            stringRedisTemplate.delete(redisKey);
+            log.info("验证码验证成功，已删除Redis中的验证码，邮箱: {}", email);
+
             return Result.success("验证码验证成功", null);
 
         } catch (Exception ex) {
@@ -132,10 +140,9 @@ public class AuthenticationService {
      * @param email            用户邮箱
      * @param verificationCode 验证码
      * @param newPassword      新密码
-     * @param session          HTTP会话对象
      * @return 重置结果
      */
-    public Result<?> resetPassword(String email, String verificationCode, String newPassword, HttpSession session) {
+    public Result<?> resetPassword(String email, String verificationCode, String newPassword) {
         try {
             // 参数校验
             if (email == null || email.trim().isEmpty()) {
@@ -151,8 +158,8 @@ public class AuthenticationService {
                 return Result.error(Result.BAD_REQUEST, "密码长度应为6-20个字符");
             }
 
-            // 首先验证验证码
-            Result<?> verifyResult = verifyCode(email, verificationCode, session);
+            // 首先验证验证码（验证成功后会自动从Redis删除）
+            Result<?> verifyResult = verifyCode(email, verificationCode);
             if (verifyResult.getCode() != Result.OK) {
                 return verifyResult; // 验证码验证失败，直接返回错误结果
             }
@@ -173,9 +180,6 @@ public class AuthenticationService {
                 log.error("重置密码失败: 数据库更新失败，邮箱: {}", email);
                 return Result.error(Result.SERVER_ERROR, "密码重置失败，请稍后再试");
             }
-
-            // 清除会话中的验证码，防止重复使用
-            session.removeAttribute("verificationCode");
 
             log.info("密码重置成功，邮箱: {}", email);
             return Result.success("密码重置成功");

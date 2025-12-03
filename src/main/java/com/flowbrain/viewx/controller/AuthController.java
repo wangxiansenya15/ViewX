@@ -7,7 +7,6 @@ import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.service.AuthenticationService;
 import com.flowbrain.viewx.service.EmailService;
 import com.flowbrain.viewx.service.UserService;
-import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,14 +28,38 @@ public class AuthController {
     }
 
     @PostMapping("/code")
-    public String getVerificationCode(@RequestBody Map<String, String> payload, HttpSession session) {
+    public String getVerificationCode(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
-        return emailService.sendVerificationCode(email, session);
+        return emailService.sendVerificationCode(email);
     }
 
     @PostMapping("/register")
     public Result<?> registerUser(@RequestBody User user) {
-        return userService.insertUser(user);
+        log.info("开始处理注册请求，用户名: {}, 邮箱: {}", user.getUsername(), user.getEmail());
+
+        // 1. 验证必填字段
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            return Result.error(Result.BAD_REQUEST, "邮箱不能为空");
+        }
+
+        // 2. 验证验证码（从 User 对象中获取前端传来的验证码）
+        String verificationCode = user.getVerificationCode();
+        if (verificationCode == null || verificationCode.trim().isEmpty()) {
+            return Result.error(Result.BAD_REQUEST, "验证码不能为空");
+        }
+
+        // 3. 调用验证码验证服务（验证成功后会自动从Redis删除验证码）
+        Result<?> verifyResult = authService.verifyCode(user.getEmail(), verificationCode);
+        if (verifyResult.getCode() != Result.OK) {
+            log.warn("注册失败: 验证码验证失败，邮箱: {}", user.getEmail());
+            return verifyResult; // 返回验证失败的结果
+        }
+
+        // 4. 验证码验证成功，执行注册
+        Result<String> registerResult = userService.insertUser(user);
+        log.info("注册处理完成，用户名: {}, 结果: {}", user.getUsername(), registerResult.getMessage());
+
+        return registerResult;
     }
 
     @PostMapping("/login")
@@ -69,17 +92,16 @@ public class AuthController {
      * 用于注册时验证邮箱验证码是否正确
      * 
      * @param payload 包含邮箱和验证码的请求体
-     * @param session HTTP会话对象，用于获取存储的验证码
      * @return 验证结果
      */
     @PostMapping("/verify")
-    public Result<?> verifyCode(@RequestBody Map<String, String> payload, HttpSession session) {
+    public Result<?> verifyCode(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         String verificationCode = payload.get("verificationCode");
 
         log.info("开始验证验证码，邮箱: {}", email);
 
-        return authService.verifyCode(email, verificationCode, session);
+        return authService.verifyCode(email, verificationCode);
     }
 
     /**
@@ -87,18 +109,17 @@ public class AuthController {
      * 通过验证码验证后重置用户密码
      * 
      * @param payload 包含邮箱、验证码和新密码的请求体
-     * @param session HTTP会话对象，用于验证验证码
      * @return 重置结果
      */
     @PostMapping("/reset")
-    public Result<?> resetPassword(@RequestBody Map<String, String> payload, HttpSession session) {
+    public Result<?> resetPassword(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
         String verificationCode = payload.get("verificationCode");
         String newPassword = payload.get("newPassword");
 
         log.info("开始重置密码，邮箱: {}", email);
 
-        return authService.resetPassword(email, verificationCode, newPassword, session);
+        return authService.resetPassword(email, verificationCode, newPassword);
     }
 
     /**

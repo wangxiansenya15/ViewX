@@ -46,13 +46,16 @@ public class User implements Serializable {
     @TableField(exist = false)
     private UserDetail details;
 
-    //  枚举字段,用于表示用户状态，默认为正常
+    // 枚举字段,用于表示用户状态，默认为正常
     @TableField(exist = false)
     private UserStatus status;
 
+    // 验证码字段（仅用于接收前端数据，不存储到数据库）
+    @TableField(exist = false)
+    private String verificationCode;
+
     @TableField(value = "created_at")
     private Date registerTime;
-
 
     @TableField(value = "updated_at")
     private Date updateTime;
@@ -60,8 +63,8 @@ public class User implements Serializable {
     @TableField(value = "last_login_at")
     private Date lastLoginTime;
 
-
-    /** 数据库存储的四个原始字段
+    /**
+     * 数据库存储的四个原始字段
      * 分别表示用户的账户是否禁用、过期、锁定、凭证过期
      */
     @TableField(value = "enabled")
@@ -91,8 +94,7 @@ public class User implements Serializable {
                 enabled,
                 accountNonExpired,
                 accountNonLocked,
-                credentialsNonExpired
-        );
+                credentialsNonExpired);
     }
 
     public void setStatus(UserStatus status) {

@@ -8,10 +8,12 @@ import com.flowbrain.viewx.pojo.dto.UserProfileDTO;
 import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.pojo.entity.UserDetail;
 import com.flowbrain.viewx.pojo.vo.UserProfileVO;
+import com.flowbrain.viewx.service.impl.LocalStorageStrategy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 用户资料服务
@@ -30,8 +32,6 @@ public class ProfileService {
     @Autowired
     private UserDetailMapper userDetailMapper;
 
-    @Autowired
-    private UserService userService;
 
     /**
      * 获取用户资料
@@ -206,7 +206,7 @@ public class ProfileService {
     }
 
     @Autowired
-    private com.flowbrain.viewx.service.impl.LocalStorageStrategy storageStrategy;
+    private LocalStorageStrategy storageStrategy;
 
     /**
      * 上传头像
@@ -217,7 +217,7 @@ public class ProfileService {
      * @return 头像访问URL
      */
     @Transactional
-    public String uploadAvatar(Long userId, org.springframework.web.multipart.MultipartFile file, String filename)
+    public String uploadAvatar(Long userId, MultipartFile file, String filename)
             throws Exception {
         try {
             // 1. 获取用户当前头像
