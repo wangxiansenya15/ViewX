@@ -2,7 +2,7 @@ package com.flowbrain.viewx.service.impl;
 
 import com.flowbrain.viewx.config.ResourceStorageConfig;
 import com.flowbrain.viewx.service.StorageStrategy;
-import com.flowbrain.viewx.service.StorageType;
+import com.flowbrain.viewx.common.StorageType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

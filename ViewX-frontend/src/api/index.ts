@@ -218,3 +218,26 @@ export const userApi = {
         })
     }
 }
+
+// 管理员相关 API
+export const adminApi = {
+    // 获取用户列表
+    getUsers(page = 1, size = 10) {
+        return request.get<any>('/admin/users', { params: { page, size } })
+    },
+
+    // 管理员为用户上传视频
+    createVideoForUser(userId: number, data: VideoCreateDTO) {
+        return request.post<number>(`/admin/users/${userId}/videos`, data)
+    },
+
+    // 管理员更新用户信息
+    updateUser(userId: number, data: any) {
+        return request.put<void>(`/admin/users/${userId}`, { id: userId, ...data })
+    },
+
+    // 管理员更新用户状态
+    updateUserStatus(userId: number, status: string) {
+        return request.patch<void>(`/admin/users/${userId}/status`, { status })
+    }
+}

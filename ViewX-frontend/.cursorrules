@@ -1,4 +1,4 @@
-# ViewX Project Rules
+# ViewX-frontend Project Rules
 
 ## Technology Stack
 - **Framework**: Vue 3 (Composition API, `<script setup>`)

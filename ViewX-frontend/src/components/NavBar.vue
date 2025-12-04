@@ -49,6 +49,16 @@
             <el-dropdown-item command="profile">
               <el-icon><User /></el-icon>个人中心
             </el-dropdown-item>
+            
+            <!-- Admin Panel Link -->
+            <el-dropdown-item 
+              v-if="isAdminOrModerator" 
+              command="admin"
+              divided
+            >
+              <el-icon><Management /></el-icon>管理后台
+            </el-dropdown-item>
+
             <el-dropdown-item command="settings">
               <el-icon><Setting /></el-icon>设置
             </el-dropdown-item>
@@ -72,9 +82,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { Play } from 'lucide-vue-next'
-import { Search, Bell, Menu, User, Setting, SwitchButton } from '@element-plus/icons-vue'
+import { Search, Bell, Menu, User, Setting, SwitchButton, Management } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { userApi, type UserProfileVO } from '@/api'
 
@@ -88,11 +98,26 @@ const emit = defineEmits<{
   'toggle-sidebar': []
   'open-login': []
   'logout': []
-  'navigate': [view: 'home' | 'settings' | 'profile']
+  'navigate': [view: 'home' | 'settings' | 'profile' | 'admin']
 }>()
 
 const userProfile = ref<UserProfileVO | null>(null)
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+
+const isAdminOrModerator = computed(() => {
+  if (!userProfile.value || !userProfile.value.role) return false
+  const role = userProfile.value.role
+  // 匹配后端 Role.java 中的 label: "超级管理员", "管理员", "审核员"
+  return role === '超级管理员' || 
+         role === '管理员' || 
+         role === '审核员' ||
+         // 保留英文/代码回退以防万一
+         role.includes('Admin') || 
+         role.includes('Moderator') ||
+         role === 'ROLE_SUPER_ADMIN' || 
+         role === 'ROLE_ADMIN' || 
+         role === 'ROLE_REVIEWER'
+})
 
 const fetchUserProfile = async () => {
   if (props.isLoggedIn) {
@@ -142,6 +167,8 @@ const handleCommand = (command: string) => {
     emit('navigate', 'profile')
   } else if (command === 'settings') {
     emit('navigate', 'settings')
+  } else if (command === 'admin') {
+    emit('navigate', 'admin')
   }
 }
 </script>

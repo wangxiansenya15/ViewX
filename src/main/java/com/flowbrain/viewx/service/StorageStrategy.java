@@ -1,5 +1,6 @@
 package com.flowbrain.viewx.service;
 
+import com.flowbrain.viewx.common.StorageType;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 

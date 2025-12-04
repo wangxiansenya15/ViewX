@@ -8,22 +8,28 @@
     <!-- Splash Screen -->
     <SplashScreen :show="isInitialLoad" :progress="loadPercent" />
 
-    <!-- 顶部导航栏 -->
-    <NavBar :theme="theme" :is-logged-in="isLoggedIn" @toggle-sidebar="toggleSidebar" @open-login="openLogin"
-      @logout="handleLogout" @navigate="handleNavigation" />
+    <!-- Admin Layout -->
+    <AdminLayout v-if="activeTab === 'admin'" @back-to-home="handleNavigation('home')" />
 
-    <div class="flex flex-1 pt-16 h-full overflow-hidden relative z-10">
+    <!-- User Layout -->
+    <template v-else>
+      <!-- 顶部导航栏 -->
+      <NavBar :theme="theme" :is-logged-in="isLoggedIn" @toggle-sidebar="toggleSidebar" @open-login="openLogin"
+        @logout="handleLogout" @navigate="handleNavigation" />
 
-      <!-- 左侧导航 (Sidebar) -->
-      <Sidebar class="hidden md:flex" @change-tab="handleTabChange" @navigate="handleNavigation" />
+      <div class="flex flex-1 pt-16 h-full overflow-hidden relative z-10">
 
-      <!-- 主内容区 -->
-      <main class="flex-1 overflow-y-auto pt-4 md:pt-8 scroll-smooth" ref="mainScroll">
-        <VideoMasonry v-if="activeTab === 'home'" :videos="videos" @open-video="openVideo" />
-        <Profile v-else-if="activeTab === 'profile'" />
-        <Settings v-else-if="activeTab === 'settings'" :is-logged-in="isLoggedIn" :theme="theme" @toggle-theme="toggleTheme" @require-login="openLogin" />
-      </main>
-    </div>
+        <!-- 左侧导航 (Sidebar) -->
+        <Sidebar class="hidden md:flex" @change-tab="handleTabChange" @navigate="handleNavigation" />
+
+        <!-- 主内容区 -->
+        <main class="flex-1 overflow-y-auto pt-4 md:pt-8 scroll-smooth" ref="mainScroll">
+          <VideoMasonry v-if="activeTab === 'home'" :videos="videos" @open-video="openVideo" />
+          <Profile v-else-if="activeTab === 'profile'" />
+          <Settings v-else-if="activeTab === 'settings'" :is-logged-in="isLoggedIn" :theme="theme" @toggle-theme="toggleTheme" @require-login="openLogin" />
+        </main>
+      </div>
+    </template>
 
     <!-- 沉浸式详情页 (Modal) -->
     <VideoDetail :video="currentVideo" @close="closeVideo" />
@@ -46,6 +52,7 @@ import VideoDetail from './components/VideoDetail.vue'
 import Login from './views/Login.vue'
 import Profile from './views/Profile.vue'
 import Settings from './views/Settings.vue'
+import AdminLayout from './views/admin/AdminLayout.vue'
 import SplashScreen from './components/SplashScreen.vue'
 import { authApi, videoApi, type VideoVO } from '@/api'
 
@@ -106,7 +113,7 @@ const handleTabChange = (tabId: string) => {
   }
 }
 
-const handleNavigation = (view: 'home' | 'settings' | 'profile') => {
+const handleNavigation = (view: 'home' | 'settings' | 'profile' | 'admin') => {
   if (view === 'profile' && !isLoggedIn.value) {
     openLogin()
     return
@@ -118,6 +125,8 @@ const handleNavigation = (view: 'home' | 'settings' | 'profile') => {
     activeTab.value = 'settings'
   } else if (view === 'profile') {
     activeTab.value = 'profile'
+  } else if (view === 'admin') {
+    activeTab.value = 'admin'
   }
 }
 
