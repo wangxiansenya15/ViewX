@@ -37,8 +37,8 @@ class Request {
             (response: AxiosResponse) => {
                 const { code, message, data } = response.data as Result
 
-                // 假设 200 代表业务成功
-                if (code === 200) {
+                // 假设 200 代表业务成功 (兼容字符串类型的状态码)
+                if (Number(code) === 200 || Number(code) === 0) {
                     return data // 直接返回业务数据
                 } else if (code === 401) {
                     ElMessage.error(message || 'Token已失效或过期，请重新登录')
@@ -100,8 +100,28 @@ class Request {
     }
 }
 
+import JSONBig from 'json-bigint'
+
+// Configure JSONBig to store large numbers as strings
+const JSONBigString = JSONBig({ storeAsString: true })
+
 // 导出实例，baseURL 从环境变量获取
 export default new Request({
     baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
     timeout: 10000,
+    transformResponse: [
+        (data) => {
+            try {
+                // If data is a string, try to parse it with JSONBig
+                if (typeof data === 'string') {
+                    // console.log('Parsing JSON with JSONBig...')
+                    return JSONBigString.parse(data)
+                }
+                return data
+            } catch (e) {
+                // If parsing fails, return original data
+                return data
+            }
+        }
+    ]
 })

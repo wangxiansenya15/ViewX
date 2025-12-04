@@ -38,12 +38,11 @@ public class UserController {
         return userService.deleteUserById(id);
     }
 
-    // 更新用户（PUT /users/{id}）
+    // 更新用户(PUT /users/{id})
     @PutMapping("/{id}")
-    public Result<?> updateUser(@RequestBody User user, @PathVariable Integer id) {
-        if (!id.equals(user.getId())) {
-            return Result.badRequest("ID不匹配");
-        }
+    public Result<?> updateUser(@RequestBody User user, @PathVariable Long id) {
+        // 确保使用路径中的ID,防止请求体中的ID不一致
+        user.setId(id);
         return userService.updateUser(user);
     }
 

@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { Play } from 'lucide-vue-next'
 import { Search, Bell, Menu, User, Setting, SwitchButton, Management } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
@@ -142,6 +142,11 @@ watch(() => props.isLoggedIn, (newVal) => {
 
 onMounted(() => {
   fetchUserProfile()
+  window.addEventListener('user-profile-updated', fetchUserProfile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('user-profile-updated', fetchUserProfile)
 })
 
 const handleCommand = (command: string) => {

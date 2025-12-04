@@ -104,10 +104,10 @@ spring:
 file:
   storage:
     storage-type: local
-    base-url: http://localhost/viewx
-    upload-dir: #./uploads
+    base-url: ${FILE_STORAGE_BASE_URL}
+    upload-dir: ${FILE_STORAGE_UPLOAD_DIR}
     local:
-      domain: http://localhost:80/avatars/
+      domain: ${FILE_STORAGE_LOCAL_DOMAIN}
       # upload-dir: /home/arthur/Desktop/FinalStage/ViewX/uploads
 
 # 日志配置 - 开发环境（详细日志）

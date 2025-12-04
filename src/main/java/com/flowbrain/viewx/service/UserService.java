@@ -107,6 +107,7 @@ public class UserService {
     /**
      * 更新用户信息
      * 使用事务确保数据一致性，如果操作失败会自动回滚
+     * 使用MyBatis-Plus的updateById方法，自动处理动态SQL，只更新非null字段
      * 
      * @param user 用户信息
      * @return Result<Void>
@@ -117,10 +118,14 @@ public class UserService {
             return Result.badRequest("用户ID不能为空");
         }
 
-        if (getUserById(user.getId()) == null) {
+        User existingUser = userMapper.selectById(user.getId());
+        if (existingUser == null) {
             return Result.notFound("用户不存在");
         }
-        return userMapper.updateUser(user) > 0 ? Result.success("更新成功") : Result.serverError("更新失败");
+        
+        // 使用MyBatis-Plus的updateById，只更新非null字段
+        int updated = userMapper.updateById(user);
+        return updated > 0 ? Result.success("更新成功") : Result.serverError("更新失败");
     }
 
     /**

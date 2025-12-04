@@ -49,14 +49,14 @@ public class MyBatisPlusConfig {
             @Override
             public void insertFill(MetaObject metaObject) {
                 // 插入时自动填充创建时间和更新时间
-                this.strictInsertFill(metaObject, "createdAt", LocalDateTime.class, LocalDateTime.now());
-                this.strictInsertFill(metaObject, "updatedAt", LocalDateTime.class, LocalDateTime.now());
+                this.strictInsertFill(metaObject, "registerTime", java.util.Date.class, new java.util.Date());
+                this.strictInsertFill(metaObject, "updateTime", java.util.Date.class, new java.util.Date());
             }
 
             @Override
             public void updateFill(MetaObject metaObject) {
                 // 更新时自动填充更新时间
-                this.strictUpdateFill(metaObject, "updatedAt", LocalDateTime.class, LocalDateTime.now());
+                this.strictUpdateFill(metaObject, "updateTime", java.util.Date.class, new java.util.Date());
             }
         };
     }

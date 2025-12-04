@@ -289,6 +289,9 @@ const handleAvatarUpload = async (event: Event) => {
       
       // 提示成功
       // alert('头像上传成功')
+      
+      // Notify other components
+      window.dispatchEvent(new Event('user-profile-updated'))
     } catch (err: any) {
       console.error('Failed to upload avatar:', err)
       alert(err.message || '头像上传失败')
@@ -335,6 +338,8 @@ const saveProfile = async () => {
     // Refresh profile
     await fetchProfile()
     isEditing.value = false
+    // Notify other components
+    window.dispatchEvent(new Event('user-profile-updated'))
     // Show success message (optional, maybe alert for now)
   } catch (err) {
     console.error('Failed to update profile:', err)

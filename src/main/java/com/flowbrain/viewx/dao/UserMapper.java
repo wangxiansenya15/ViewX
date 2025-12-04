@@ -13,11 +13,10 @@ public interface UserMapper extends BaseMapper<User> {
     @Insert("INSERT INTO vx_users (id, username, password_encrypted, email,role) VALUES (#{id}, #{username}, #{password}, #{email}, 'USER')")
     int insertUser(User user);
 
+
     @Update("UPDATE vx_users SET is_deleted=true, deleted_at=NOW() WHERE id=#{id}")
     boolean deleteUserById(@Param("id") Long id);
 
-    @Update("UPDATE vx_users SET username=#{username}, email=#{email},role=#{role}, update_at = NOW() where id=#{id}")
-    int updateUser(User user);
 
     @Select("SELECT *, created_at as registerTime, updated_at as updateTime FROM vx_users WHERE id=#{id} AND is_deleted=false")
     User selectUserById(Long id);

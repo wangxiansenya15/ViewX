@@ -1,6 +1,8 @@
 package com.flowbrain.viewx.pojo.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 import com.flowbrain.viewx.common.Role;
 import com.flowbrain.viewx.common.UserStatus;
@@ -21,6 +23,7 @@ public class User implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    @JsonSerialize(using = ToStringSerializer.class)
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
@@ -54,10 +57,10 @@ public class User implements Serializable {
     @TableField(exist = false)
     private String verificationCode;
 
-    @TableField(value = "created_at")
+    @TableField(value = "created_at", fill = FieldFill.INSERT)
     private Date registerTime;
 
-    @TableField(value = "updated_at")
+    @TableField(value = "updated_at", fill = FieldFill.INSERT_UPDATE)
     private Date updateTime;
 
     @TableField(value = "last_login_at")
