@@ -66,7 +66,7 @@ public class SecurityConfig {
                         // 允许匿名访问视频详情和交互状态
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/videos/**", "/interactions/**").permitAll()
                         // 角色权限控制
-                        .requestMatchers("/goods/**",  "/user/**",  "/cart/**","/avatar/**", "/orders/**","/payment/**", "/msg/**", "/videos/**", "/interactions/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
+                        .requestMatchers("/comments/**",  "/user/**","/avatar/**","/payment/**", "/msg/**", "/videos/**", "/interactions/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
                         .requestMatchers("/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         // 其他请求需要认证
                         .anyRequest().authenticated()

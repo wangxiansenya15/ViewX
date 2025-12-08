@@ -1,13 +1,12 @@
 package com.flowbrain.viewx.controller;
 
 import com.flowbrain.viewx.common.Result;
-import com.flowbrain.viewx.pojo.dto.VideoCreateDTO;
+import com.flowbrain.viewx.pojo.dto.VideoUploadDTO;
 import com.flowbrain.viewx.pojo.dto.VideoUpdateDTO;
 import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.pojo.vo.VideoDetailVO;
 import com.flowbrain.viewx.service.UserService;
 import com.flowbrain.viewx.service.VideoService;
-import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -46,15 +45,39 @@ public class VideoController {
     }
 
     /**
-     * Create/Publish a new video
+     * Upload video with metadata
+     * 上传视频（包含文件和元数据）
      */
     @PostMapping
-    public Result<Long> createVideo(@Valid @RequestBody VideoCreateDTO dto) {
+    public Result<Long> uploadVideo(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("title") String title,
+            @RequestParam("duration") Integer duration,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "subcategory", required = false) String subcategory,
+            @RequestParam(value = "coverUrl", required = false) String coverUrl,
+            @RequestParam(value = "thumbnailUrl", required = false) String thumbnailUrl,
+            @RequestParam(value = "tags", required = false) String[] tags,
+            @RequestParam(value = "visibility", required = false, defaultValue = "PUBLIC") String visibility) {
         Long userId = getCurrentUserId();
         if (userId == null) {
             return Result.error(401, "请先登录");
         }
-        return videoService.createVideo(userId, dto);
+
+        // 构建DTO
+        VideoUploadDTO dto = new VideoUploadDTO();
+        dto.setTitle(title);
+        dto.setDuration(duration);
+        dto.setDescription(description);
+        dto.setCategory(category);
+        dto.setSubcategory(subcategory);
+        dto.setCoverUrl(coverUrl);
+        dto.setThumbnailUrl(thumbnailUrl);
+        dto.setTags(tags);
+        dto.setVisibility(visibility);
+
+        return videoService.uploadVideo(userId, file, dto);
     }
 
     /**
@@ -70,18 +93,6 @@ public class VideoController {
     }
 
     /**
-     * Upload video file
-     */
-    @PostMapping("/upload")
-    public Result<String> uploadVideo(@RequestParam("file") MultipartFile file) {
-        Long userId = getCurrentUserId();
-        if (userId == null) {
-            return Result.error(401, "请先登录");
-        }
-        return videoService.uploadVideoFile(file);
-    }
-
-    /**
      * Upload cover image
      */
     @PostMapping("/upload/cover")
@@ -91,5 +102,29 @@ public class VideoController {
             return Result.error(401, "请先登录");
         }
         return videoService.uploadCoverImage(file);
+    }
+
+    /**
+     * Delete video
+     */
+    @DeleteMapping("/{id}")
+    public Result<String> deleteVideo(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return Result.error(401, "请先登录");
+        }
+        return videoService.deleteVideo(userId, id);
+    }
+
+    /**
+     * Get my videos
+     */
+    @GetMapping("/my")
+    public Result<java.util.List<com.flowbrain.viewx.pojo.entity.Video>> getMyVideos() {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return Result.error(401, "请先登录");
+        }
+        return videoService.getMyVideos(userId);
     }
 }

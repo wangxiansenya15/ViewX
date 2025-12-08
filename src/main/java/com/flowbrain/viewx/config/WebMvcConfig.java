@@ -9,10 +9,9 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
-    
+
     /**
      * 配置Jackson ObjectMapper，将Long类型序列化为String
      * 解决JavaScript中Long类型精度丢失问题
@@ -26,7 +25,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 将Long和long类型序列化为字符串
         simpleModule.addSerializer(Long.class, ToStringSerializer.instance);
         simpleModule.addSerializer(Long.TYPE, ToStringSerializer.instance);
-        
+
         // 使用builder构建ObjectMapper并注册模块
         return builder
                 .modules(simpleModule)

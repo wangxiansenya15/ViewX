@@ -11,6 +11,13 @@ public interface StorageStrategy {
     String storeFile(MultipartFile file, String filename) throws IOException;
 
     /**
+     * Store file from input stream
+     */
+    default String storeFile(java.io.InputStream inputStream, String filename) throws IOException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    /**
      * 删除文件
      */
     boolean deleteFile(String fileUrl) throws IOException;
@@ -25,4 +32,3 @@ public interface StorageStrategy {
      */
     StorageType getStorageType();
 }
-

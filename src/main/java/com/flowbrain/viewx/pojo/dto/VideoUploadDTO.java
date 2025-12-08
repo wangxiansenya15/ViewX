@@ -7,7 +7,7 @@ import jakarta.validation.constraints.*;
  * 视频上传/创建 DTO
  */
 @Data
-public class VideoCreateDTO {
+public class VideoUploadDTO {
     @NotBlank(message = "标题不能为空")
     @Size(max = 200, message = "标题长度不能超过200")
     private String title;
@@ -15,8 +15,11 @@ public class VideoCreateDTO {
     @Size(max = 2000, message = "描述长度不能超过2000")
     private String description;
 
-    @NotBlank(message = "视频URL不能为空")
-    private String videoUrl;
+    @NotNull(message = "视频时长不能为空")
+    @Min(value = 1, message = "视频时长必须大于0")
+    private Integer duration; // 视频时长（秒）
+
+    private String coverUrl; // 封面图片URL（前端上传封面后传入）
 
     private String thumbnailUrl;
 

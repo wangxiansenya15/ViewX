@@ -33,11 +33,11 @@ public class RecommendController {
      * Accessible by everyone.
      */
     @GetMapping("/trending")
-    public Result<List<Video>> getTrendingVideos(
+    public Result<List<com.flowbrain.viewx.pojo.vo.VideoListVO>> getTrendingVideos(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         log.info("Fetching trending videos, page: {}, size: {}", page, size);
-        List<Video> videos = recommendService.getTrendingVideos(page, size);
+        List<com.flowbrain.viewx.pojo.vo.VideoListVO> videos = recommendService.getTrendingVideos(page, size);
         return Result.success(videos);
     }
 
@@ -47,17 +47,17 @@ public class RecommendController {
      * If guest, returns trending/random content.
      */
     @GetMapping("/feed")
-    public Result<List<Video>> getRecommendedFeed(
+    public Result<List<com.flowbrain.viewx.pojo.vo.VideoListVO>> getRecommendedFeed(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         Long userId = null;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        
-        if (authentication != null && 
-            authentication.isAuthenticated() && 
-            !(authentication instanceof AnonymousAuthenticationToken)) {
-            
+
+        if (authentication != null &&
+                authentication.isAuthenticated() &&
+                !(authentication instanceof AnonymousAuthenticationToken)) {
+
             String username = authentication.getName();
             User user = userService.getUserByUsername(username);
             if (user != null) {
@@ -68,7 +68,8 @@ public class RecommendController {
             log.info("Fetching recommended feed for guest");
         }
 
-        List<Video> videos = recommendService.getRecommendedVideos(userId, page, size);
+        List<com.flowbrain.viewx.pojo.vo.VideoListVO> videos = recommendService.getRecommendedVideos(userId, page,
+                size);
         return Result.success(videos);
     }
 }

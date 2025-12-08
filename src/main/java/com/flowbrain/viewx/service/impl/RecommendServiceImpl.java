@@ -4,6 +4,10 @@ import com.flowbrain.viewx.dao.UserMapper;
 import com.flowbrain.viewx.dao.VideoMapper;
 import com.flowbrain.viewx.pojo.entity.Video;
 import com.flowbrain.viewx.service.RecommendService;
+import com.flowbrain.viewx.service.StorageStrategy;
+import com.flowbrain.viewx.dao.UserDetailMapper;
+import com.flowbrain.viewx.pojo.entity.UserDetail;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -27,79 +31,133 @@ public class RecommendServiceImpl implements RecommendService {
     private UserMapper userMapper;
 
     @Autowired
+    private UserDetailMapper userDetailMapper;
+
+    @Autowired
+    private StorageStrategy storageStrategy;
+
+    @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
     private static final String TRENDING_KEY = "viewx:video:trending";
 
     @Override
-    public List<Video> getRecommendedVideos(Long userId, int page, int size) {
-        // 1. If user is guest or no preferences, return trending
-        if (userId == null) {
-            return getTrendingVideos(page, size);
-        }
-
-        // TODO: Implement personalized recommendation based on user interest tags
-        // For now, return trending videos as fallback
-        return getTrendingVideos(page, size);
-    }
-
-    @Override
-    public List<Video> getTrendingVideos(int page, int size) {
+    public List<com.flowbrain.viewx.pojo.vo.VideoListVO> getTrendingVideos(int page, int size) {
         int start = (page - 1) * size;
         int end = start + size - 1;
 
         // Fetch top videos from Redis ZSet
         Set<Object> videoIds = redisTemplate.opsForZSet().reverseRange(TRENDING_KEY, start, end);
-        
+
+        List<Video> videos = new ArrayList<>();
         if (videoIds == null || videoIds.isEmpty()) {
             // Fallback to DB if Redis is empty
             log.info("Redis trending empty, fetching from DB");
-            return videoMapper.selectLatestVideos(size * (page - 1), size);
+            videos = videoMapper.selectLatestVideos(size * (page - 1), size);
+        } else {
+            List<Long> ids = videoIds.stream()
+                    .map(id -> Long.parseLong(id.toString()))
+                    .collect(Collectors.toList());
+
+            for (Long id : ids) {
+                Video v = videoMapper.selectById(id);
+                if (v != null)
+                    videos.add(v);
+            }
         }
 
-        List<Long> ids = videoIds.stream()
-                .map(id -> Long.parseLong(id.toString()))
-                .collect(Collectors.toList());
-        
-        List<Video> videos = new ArrayList<>();
-        for(Long id : ids) {
-             Video v = videoMapper.selectById(id);
-             if(v != null) videos.add(v);
+        // 转换为 VO 并填充用户信息
+        return videos.stream().map(this::convertToVO).collect(Collectors.toList());
+    }
+
+    private com.flowbrain.viewx.pojo.vo.VideoListVO convertToVO(Video video) {
+        com.flowbrain.viewx.pojo.vo.VideoListVO vo = new com.flowbrain.viewx.pojo.vo.VideoListVO();
+        org.springframework.beans.BeanUtils.copyProperties(video, vo);
+
+        // 填充用户信息
+        if (video.getUploaderId() != null) {
+            // 获取 User (nickname)
+            com.flowbrain.viewx.pojo.entity.User uploader = userMapper.selectById(video.getUploaderId());
+            if (uploader != null) {
+                vo.setUploaderNickname(uploader.getNickname());
+            }
+
+            // 获取 UserDetail (avatar)
+            QueryWrapper<UserDetail> query = new QueryWrapper<>();
+            query.eq("user_id", video.getUploaderId());
+            UserDetail detail = userDetailMapper.selectOne(query);
+
+            if (detail != null) {
+                if (detail.getAvatar() != null) {
+                    // 处理头像URL
+                    if (!detail.getAvatar().startsWith("http")) {
+                        String fullUrl = storageStrategy.getFileUrl(detail.getAvatar());
+                        vo.setUploaderAvatar(fullUrl);
+                        log.info("Video {} Uploader {} Avatar processed: {} -> {}", video.getId(),
+                                video.getUploaderId(), detail.getAvatar(), fullUrl);
+                    } else {
+                        vo.setUploaderAvatar(detail.getAvatar());
+                        log.info("Video {} Uploader {} Avatar (http): {}", video.getId(), video.getUploaderId(),
+                                detail.getAvatar());
+                    }
+                } else {
+                    log.info("Video {} Uploader {} has NULL avatar in UserDetail", video.getId(),
+                            video.getUploaderId());
+                }
+            } else {
+                log.info("Video {} Uploader {} UserDetail not found", video.getId(), video.getUploaderId());
+            }
+        } else {
+            log.info("Video {} has NO uploaderId", video.getId());
         }
-        return videos;
+        return vo;
+    }
+
+    @Override
+    public List<com.flowbrain.viewx.pojo.vo.VideoListVO> getRecommendedVideos(Long userId, int page, int size) {
+        // 1. If user is guest or no preferences, return trending
+        if (userId == null) {
+            return getTrendingVideos(page, size);
+        }
+
+        // TODO: Implement personalized recommendation
+        return getTrendingVideos(page, size);
     }
 
     @Override
     public void updateVideoScore(Long videoId) {
         Video video = videoMapper.selectById(videoId);
-        if (video == null) return;
+        if (video == null)
+            return;
 
         double score = calculateScore(video);
-        
+
         redisTemplate.opsForZSet().add(TRENDING_KEY, videoId.toString(), score);
         log.debug("Updated score for video {}: {}", videoId, score);
     }
 
     private double calculateScore(Video video) {
         // Algorithm from README:
-        // score = (playCount * 0.4 + likeCount * 0.3 + commentCount * 0.2) * exp(-0.1 * hoursSincePublish);
-        
+        // score = (playCount * 0.4 + likeCount * 0.3 + commentCount * 0.2) * exp(-0.1 *
+        // hoursSincePublish);
+
         long playCount = video.getViewCount() == null ? 0 : video.getViewCount();
         long likeCount = video.getLikeCount() == null ? 0 : video.getLikeCount();
         long commentCount = video.getCommentCount() == null ? 0 : video.getCommentCount();
-        
+
         double interactionScore = playCount * 0.4 + likeCount * 0.3 + commentCount * 0.2;
-        
+
         long hoursSincePublish = 0;
         if (video.getPublishedAt() != null) {
             hoursSincePublish = Duration.between(video.getPublishedAt(), LocalDateTime.now()).toHours();
         }
         // Avoid negative hours if clock skew
-        if (hoursSincePublish < 0) hoursSincePublish = 0;
-        
+        if (hoursSincePublish < 0)
+            hoursSincePublish = 0;
+
         // Time decay factor
         double timeDecay = Math.exp(-0.1 * hoursSincePublish);
-        
+
         return interactionScore * timeDecay;
     }
 }

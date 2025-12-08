@@ -231,7 +231,8 @@ public class ProfileService {
             }
 
             // 2. 存储新头像
-            String storedFilename = storageStrategy.storeFile(file, filename);
+            String avatarFilename = "avatars/" + filename;
+            String storedFilename = storageStrategy.storeFile(file, avatarFilename);
             String newAvatarUrl = storageStrategy.getFileUrl(storedFilename);
 
             // 3. 更新数据库

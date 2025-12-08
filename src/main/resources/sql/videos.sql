@@ -13,14 +13,16 @@ CREATE TABLE vx_videos (
 
     -- 媒体文件信息
                         video_url VARCHAR(500) NOT NULL,
+                        cover_url VARCHAR(500), -- 封面图片URL
                         thumbnail_url VARCHAR(500),
                         preview_url VARCHAR(500), -- 预览片段
                         file_size BIGINT,
                         format VARCHAR(10),
                         resolution VARCHAR(20), -- 分辨率 1080p, 4K等
 
+
     -- 内容分类
-                        category VARCHAR(50) NOT NULL,
+                        category VARCHAR(50) DEFAULT '其他',
                         subcategory VARCHAR(50),
                         tags VARCHAR(100)[],
 
