@@ -41,7 +41,7 @@ ViewX-frontend/node_modules
 
 # some test static resources
 src/main/resources/static
-src/main/resources/templates
+#src/main/resources/templates
 uploads
 
 ### system ignore ###
