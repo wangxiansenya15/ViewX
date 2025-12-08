@@ -25,12 +25,33 @@
         "trending": "热门趋势",
         "subs": "关注动态",
         "library": "播放历史",
+        "me": "我的",
         "settings": "设置",
         "gemini": {
             "title": "Gemini Power",
             "desc": "体验 AI 驱动的视频洞察与即时互动。",
             "more": "了解更多"
         }
+    },
+    "profile": {
+        "works": "作品",
+        "likes": "喜欢",
+        "collections": "收藏",
+        "history": "观看历史"
+    },
+    "upload": {
+        "title": "发布视频",
+        "dragDrop": "拖拽视频到此处，或点击上传",
+        "support": "支持 MP4, WebM 格式",
+        "videoInfo": "视频信息",
+        "videoTitle": "标题",
+        "videoDesc": "简介",
+        "cover": "封面图",
+        "uploadCover": "上传封面",
+        "publish": "发布",
+        "publishing": "发布中...",
+        "success": "发布成功！",
+        "error": "发布失败，请重试"
     },
     "settings": {
         "title": "设置",

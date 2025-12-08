@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Home, Flame, Users, Library, Sparkles, Settings } from 'lucide-vue-next'
+import { Home, Flame, Users, Library, Sparkles, Settings, User } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -50,6 +50,7 @@ const navItems = [
   { id: 'trending', nameKey: 'sidebar.trending', iconComponent: Flame },
   { id: 'subs', nameKey: 'sidebar.subs', iconComponent: Users },
   { id: 'library', nameKey: 'sidebar.library', iconComponent: Library },
+  { id: 'profile', nameKey: 'sidebar.me', iconComponent: User },
 ]
 
 defineEmits(['change-tab', 'navigate'])

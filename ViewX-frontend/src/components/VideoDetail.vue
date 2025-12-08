@@ -20,12 +20,23 @@
             :style="`background-image: url(${video.thumbnailUrl}); background-size: cover; background-position: center;`">
           </div>
 
-          <!-- 模拟播放器 -->
-          <div class="relative w-full max-w-5xl aspect-video bg-black shadow-2xl overflow-hidden group/player">
-            <img :src="video.thumbnailUrl" class="w-full h-full object-contain opacity-90">
+          <!-- 真实播放器 -->
+          <div class="relative w-full max-w-5xl aspect-video bg-black shadow-2xl overflow-hidden group/player" 
+               @mouseenter="showControls = true" @mouseleave="showControls = false">
+            
+            <video 
+              ref="videoPlayer"
+              :src="video.videoUrl"
+              :poster="video.coverUrl || video.thumbnailUrl"
+              class="w-full h-full object-contain"
+              @timeupdate="handleTimeUpdate"
+              @ended="isPlaying = false"
+              @click="togglePlay"
+              autoplay
+            ></video>
 
             <!-- 弹幕层 -->
-            <div class="absolute inset-0 overflow-hidden z-10 pointer-events-none mask-linear-gradient">
+            <div class="absolute inset-0 overflow-hidden z-10 pointer-events-none mask-linear-gradient" v-show="showDanmaku">
               <div v-for="dm in activeDanmakuList" :key="dm.id"
                 class="danmaku-item text-white/90 text-lg lg:text-2xl font-bold drop-shadow-md"
                 :style="{ top: dm.top + '%', animationDuration: dm.speed + 's', fontSize: dm.size + 'px' }">
@@ -33,36 +44,48 @@
               </div>
             </div>
 
-            <!-- 播放器控制栏 (Hover显示) -->
+            <!-- 播放器控制栏 -->
             <div
-              class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover/player:opacity-100 transition-opacity duration-300">
+              class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 z-20"
+              :class="showControls || !isPlaying ? 'opacity-100' : 'opacity-0'">
+              
               <!-- 进度条 -->
               <div
-                class="w-full h-1 bg-white/20 rounded-full mb-4 cursor-pointer hover:h-1.5 transition-all relative group/progress">
-                <div class="w-1/3 h-full bg-indigo-500 rounded-full relative">
-                  <div
-                    class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow scale-0 group-hover/progress:scale-100 transition-transform">
-                  </div>
+                class="w-full h-1 bg-white/20 rounded-full mb-4 cursor-pointer hover:h-1.5 transition-all relative group/progress"
+                @click="seekVideo">
+                <div class="h-full bg-indigo-500 rounded-full relative" :style="{ width: progress + '%' }">
+                  <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow scale-0 group-hover/progress:scale-100 transition-transform"></div>
                 </div>
               </div>
+              
               <!-- 按钮组 -->
               <div class="flex justify-between items-center">
-                <div class="flex gap-4">
-                  <Play class="w-6 h-6 fill-white" />
-                  <Volume2 class="w-6 h-6" />
-                  <span class="text-sm font-medium">04:20 / {{ formatDuration(video.duration) }}</span>
+                <div class="flex gap-4 items-center">
+                  <button @click="togglePlay" class="hover:text-indigo-400 transition-colors">
+                    <component :is="isPlaying ? 'Pause' : 'Play'" class="w-6 h-6 fill-white" />
+                  </button>
+                  <Volume2 class="w-6 h-6 cursor-pointer hover:text-indigo-400" />
+                  <span class="text-sm font-medium">{{ formatDuration(currentTime) }} / {{ formatDuration(video.duration) }}</span>
                 </div>
-                <div class="flex gap-4">
+                <div class="flex gap-4 items-center">
+                  <button 
+                    @click="showDanmaku = !showDanmaku" 
+                    class="text-sm font-bold border border-white/30 px-2 rounded hover:bg-white/10 transition-colors"
+                    :class="showDanmaku ? 'text-indigo-400 border-indigo-400' : 'text-white'"
+                  >弹</button>
                   <span class="text-sm font-bold border border-white/30 px-2 rounded">4K</span>
-                  <Maximize class="w-6 h-6" />
+                  <button @click="toggleFullscreen" class="hover:text-indigo-400 transition-colors">
+                    <Maximize class="w-6 h-6" />
+                  </button>
                 </div>
               </div>
             </div>
 
-            <!-- 中心播放按钮 -->
-            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <!-- 中心播放按钮 (暂停时显示) -->
+            <div v-if="!isPlaying" 
+                 class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30 backdrop-blur-[2px] transition-all">
               <button
-                class="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20 opacity-0 group-hover/player:opacity-100 transition-all scale-90 group-hover/player:scale-100">
+                class="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20 scale-100 animate-in zoom-in duration-200">
                 <Play class="w-8 h-8 fill-white ml-1" />
               </button>
             </div>
@@ -173,7 +196,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { ArrowLeft, Play, Volume2, Maximize, Flame, MessageCircle, Sparkles, Loader2, Bot, Send } from 'lucide-vue-next'
+import { ArrowLeft, Play, Pause, Volume2, Maximize, Flame, MessageCircle, Sparkles, Loader2, Bot, Send } from 'lucide-vue-next'
 import { marked } from 'marked'
 import type { VideoVO } from '@/api'
 
@@ -181,9 +204,61 @@ const props = defineProps<{
   video: VideoVO
 }>()
 
+const videoPlayer = ref<HTMLVideoElement | null>(null)
+const isPlaying = ref(false)
+const currentTime = ref(0)
+const progress = ref(0)
+const showControls = ref(false)
+const showDanmaku = ref(true)
+
+const togglePlay = () => {
+  if (!videoPlayer.value) return
+  if (isPlaying.value) {
+    videoPlayer.value.pause()
+  } else {
+    videoPlayer.value.play()
+    isPlaying.value = true
+  }
+}
+
+const handleTimeUpdate = () => {
+  if (!videoPlayer.value) return
+  currentTime.value = videoPlayer.value.currentTime
+  progress.value = (currentTime.value / props.video.duration) * 100
+  isPlaying.value = !videoPlayer.value.paused
+}
+
+const seekVideo = (e: MouseEvent) => {
+  if (!videoPlayer.value) return
+  const progressBar = e.currentTarget as HTMLElement
+  const rect = progressBar.getBoundingClientRect()
+  const x = e.clientX - rect.left
+  const percent = x / rect.width
+  videoPlayer.value.currentTime = percent * props.video.duration
+}
+
+const toggleFullscreen = () => {
+  if (!videoPlayer.value) return
+  if (document.fullscreenElement) {
+    document.exitFullscreen()
+  } else {
+    videoPlayer.value.parentElement?.requestFullscreen()
+  }
+}
+
+watch(() => isPlaying.value, (val) => {
+  if (val) {
+    startDanmakuEngine()
+  } else {
+    // 暂停时也可以选择不停止弹幕，或者暂停弹幕
+    // stopDanmakuEngine() 
+  }
+})
+
 const formatDuration = (seconds: number) => {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
+  const floored = Math.floor(seconds)
+  const m = Math.floor(floored / 60)
+  const s = floored % 60
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 

@@ -19,6 +19,16 @@
 
     <!-- 用户区 -->
     <div class="flex items-center gap-5">
+      <!-- Upload Button -->
+      <button 
+        v-if="isLoggedIn"
+        @click="$emit('navigate', 'upload')"
+        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-[var(--text)] transition-all border border-transparent hover:border-indigo-500/30 group"
+      >
+        <Upload class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+        <span class="text-sm font-medium">投稿</span>
+      </button>
+
       <button class="relative hover:text-[var(--text)] text-[var(--muted)] transition-colors click-spring">
         <Bell class="w-5 h-5" />
         <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-[var(--bg)]"></span>
@@ -83,7 +93,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { Play } from 'lucide-vue-next'
+import { Play, Upload } from 'lucide-vue-next'
 import { Search, Bell, Menu, User, Setting, SwitchButton, Management } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { userApi, type UserProfileVO } from '@/api'
@@ -98,7 +108,7 @@ const emit = defineEmits<{
   'toggle-sidebar': []
   'open-login': []
   'logout': []
-  'navigate': [view: 'home' | 'settings' | 'profile' | 'admin']
+  'navigate': [view: 'home' | 'settings' | 'profile' | 'admin' | 'upload']
 }>()
 
 const userProfile = ref<UserProfileVO | null>(null)

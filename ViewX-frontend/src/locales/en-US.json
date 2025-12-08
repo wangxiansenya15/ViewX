@@ -25,12 +25,33 @@
         "trending": "Trending",
         "subs": "Subscriptions",
         "library": "Library",
+        "me": "Me",
         "settings": "Settings",
         "gemini": {
             "title": "Gemini Power",
             "desc": "Experience AI-driven video insights.",
             "more": "Learn More"
         }
+    },
+    "profile": {
+        "works": "Works",
+        "likes": "Likes",
+        "collections": "Collections",
+        "history": "History"
+    },
+    "upload": {
+        "title": "Upload Video",
+        "dragDrop": "Drag and drop video here, or click to upload",
+        "support": "Supports MP4, WebM",
+        "videoInfo": "Video Details",
+        "videoTitle": "Title",
+        "videoDesc": "Description",
+        "cover": "Thumbnail",
+        "uploadCover": "Upload Thumbnail",
+        "publish": "Publish",
+        "publishing": "Publishing...",
+        "success": "Published Successfully!",
+        "error": "Failed to publish, please try again"
     },
     "settings": {
         "title": "Settings",

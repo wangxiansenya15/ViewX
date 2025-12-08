@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen bg-[#0f0f0f] pt-20 pb-10 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-7xl mx-auto">
       
       <!-- Loading State -->
       <div v-if="loading" class="flex justify-center items-center h-64">
@@ -16,7 +16,7 @@
       </div>
 
       <!-- Profile Content -->
-      <div v-else class="space-y-6">
+      <div v-else class="space-y-8">
         
         <!-- Header Card -->
         <div class="glass-panel rounded-3xl p-8 relative overflow-hidden">
@@ -54,7 +54,19 @@
             <div class="flex-1 text-center md:text-left">
               <div class="flex flex-col md:flex-row items-center md:items-start justify-between gap-4">
                 <div>
-                  <h1 class="text-3xl font-bold text-white mb-2">{{ profile?.nickname || profile?.username }}</h1>
+                  <h1 class="text-3xl font-bold text-white mb-2 flex items-center gap-2 justify-center md:justify-start">
+                    {{ profile?.nickname || profile?.username }}
+                    <span class="px-2 py-0.5 rounded-full bg-white/10 text-xs text-indigo-300 border border-white/5">
+                        Level 21
+                    </span>
+                  </h1>
+                  <div class="text-gray-400 max-w-lg mb-2 flex items-center justify-center md:justify-start gap-4 text-sm">
+                      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span> Online</span>
+                      <span>账号: {{ profile?.username }}</span>
+                      <span v-if="profile?.address" class="flex items-center gap-1">
+                          {{ profile.address }}
+                      </span>
+                  </div>
                   <p class="text-gray-400 max-w-lg">{{ profile?.description || '这个人很懒，什么都没有写~' }}</p>
                 </div>
                 
@@ -76,102 +88,86 @@
               </div>
               
               <!-- Stats -->
-              <div class="grid grid-cols-4 gap-4 mt-10 border-t border-white/5 pt-6">
-                <div class="text-center">
-                  <div class="text-2xl font-bold text-white">{{ formatNumber(profile?.followersCount || 0) }}</div>
-                  <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">粉丝</div>
+              <div class="flex items-center gap-8 mt-8 border-t border-white/5 pt-6 justify-center md:justify-start">
+                <div class="text-center md:text-left">
+                  <span class="text-xl font-bold text-white mr-1">{{ formatNumber(profile?.followingCount || 870) }}</span>
+                  <span class="text-sm text-gray-500">关注</span>
                 </div>
-                <div class="text-center border-l border-white/5">
-                  <div class="text-2xl font-bold text-white">{{ formatNumber(profile?.followingCount || 0) }}</div>
-                  <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">关注</div>
+                <div class="text-center md:text-left">
+                  <span class="text-xl font-bold text-white mr-1">{{ formatNumber(profile?.followersCount || 103) }}</span>
+                  <span class="text-sm text-gray-500">粉丝</span>
                 </div>
-                <div class="text-center border-l border-white/5">
-                  <div class="text-2xl font-bold text-white">{{ formatNumber(profile?.videoCount || 0) }}</div>
-                  <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">视频</div>
-                </div>
-                <div class="text-center border-l border-white/5">
-                  <div class="text-2xl font-bold text-white">{{ formatNumber(profile?.likeCount || 0) }}</div>
-                  <div class="text-xs text-gray-500 uppercase tracking-wider mt-1">获赞</div>
+                <div class="text-center md:text-left">
+                  <span class="text-xl font-bold text-white mr-1">{{ formatNumber(profile?.likeCount || 293) }}</span>
+                  <span class="text-sm text-gray-500">获赞</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Details Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          <!-- Left Column: Personal Info -->
-          <div class="md:col-span-1 space-y-6">
-            <div class="glass-panel p-6 rounded-2xl">
-              <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                个人信息
-              </h3>
-              <div class="space-y-4 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-gray-500">用户名</span>
-                  <span class="text-gray-300 font-mono">@{{ profile?.username }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-500">角色</span>
-                  <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-xs">{{ profile?.role || 'User' }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-500">性别</span>
-                  <span class="text-gray-300">{{ formatGender(profile?.gender) }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-500">年龄</span>
-                  <span class="text-gray-300">{{ profile?.age || '-' }}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-500">注册时间</span>
-                  <span class="text-gray-300">{{ formatDate(profile?.createdAt) }}</span>
-                </div>
+        <!-- Content Tabs -->
+        <div>
+          <div class="flex items-center gap-8 border-b border-white/10 mb-6 overflow-x-auto scrollbar-hide">
+            <button 
+              v-for="tab in tabs" 
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              class="relative px-2 py-4 text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
+              :class="activeTab === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'"
+            >
+              <component :is="tab.icon" class="w-4 h-4" />
+              {{ t(tab.labelKey) }}
+              <span class="text-xs bg-white/10 px-1.5 py-0.5 rounded-full" v-if="tab.count !== undefined">{{ tab.count }}</span>
+              <!-- Active Indicator -->
+              <div v-if="activeTab === tab.id" class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full"></div>
+            </button>
+          </div>
+
+          <!-- Tab Panels -->
+          <div class="min-h-[400px]">
+            <!-- Works Tab -->
+            <div v-if="activeTab === 'works'">
+              <div v-if="userVideos.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <div v-for="video in userVideos" :key="video.id" class="relative group/item">
+                    <VideoCard :video="video" :show-avatar="false" @click="$emit('open-video', video)" />
+                    <!-- 操作按钮 -->
+                    <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover/item:opacity-100 transition-opacity z-10">
+                        <button @click.stop="editVideo(video)" class="p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-indigo-600 transition-colors" title="编辑">
+                            <Edit2 class="w-4 h-4" />
+                        </button>
+                        <button @click.stop="deleteVideo(video)" class="p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-red-500 transition-colors" title="删除">
+                            <Trash class="w-4 h-4" />
+                        </button>
+                    </div>
+                 </div>
               </div>
+              <EmptyState v-else title="暂无作品" desc="开始创作你的第一个视频吧！" />
             </div>
-            
-            <div class="glass-panel p-6 rounded-2xl">
-              <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                联系方式
-              </h3>
-              <div class="space-y-4 text-sm">
-                <div class="group">
-                  <div class="text-gray-500 mb-1">邮箱</div>
-                  <div class="text-gray-300 truncate">{{ profile?.email || '未绑定' }}</div>
-                </div>
-                <div class="group">
-                  <div class="text-gray-500 mb-1">手机</div>
-                  <div class="text-gray-300">{{ profile?.phone || '未绑定' }}</div>
-                </div>
-                <div class="group">
-                  <div class="text-gray-500 mb-1">地址</div>
-                  <div class="text-gray-300">{{ profile?.address || '未设置' }}</div>
-                </div>
+
+            <!-- Likes Tab -->
+            <div v-else-if="activeTab === 'likes'">
+               <div class="flex flex-col items-center justify-center py-20 opacity-50">
+                  <Lock class="w-12 h-12 text-gray-600 mb-4" />
+                  <p class="text-gray-500">喜欢列表仅自己可见</p>
+               </div>
+            </div>
+
+            <!-- Collections Tab -->
+            <div v-else-if="activeTab === 'collections'">
+               <EmptyState title="暂无收藏" desc="你收藏的视频会出现在这里" />
+            </div>
+
+            <!-- History Tab -->
+            <div v-else-if="activeTab === 'history'">
+              <div v-if="historyVideos.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <VideoCard v-for="video in historyVideos" :key="video.id" :video="video" />
               </div>
+               <EmptyState v-else title="暂无观看历史" desc="去探索更多精彩视频吧" />
             </div>
           </div>
-          
-          <!-- Right Column: Recent Activity (Placeholder) -->
-          <div class="md:col-span-2 space-y-6">
-             <div class="glass-panel p-6 rounded-2xl min-h-[400px] flex flex-col justify-center items-center text-center">
-                <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h3 class="text-xl font-medium text-white mb-2">暂无视频作品</h3>
-                <p class="text-gray-500 max-w-xs">该用户还没有发布任何视频内容。期待Ta的精彩创作！</p>
-             </div>
-          </div>
-          
         </div>
+
       </div>
     </div>
 
@@ -248,13 +244,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { userApi, type UserProfileVO } from '@/api'
+import { ref, onMounted, computed, defineComponent } from 'vue'
+import { userApi, videoApi, type UserProfileVO, type VideoVO } from '@/api'
+import { useI18n } from 'vue-i18n'
+import { Grid, Heart, Bookmark, History, Lock, Trash, Edit2 } from 'lucide-vue-next'
+import VideoCard from '@/components/VideoCard.vue'
 
+// Script
+const emit = defineEmits(['open-video'])
+
+// Helper component for empty states
+const EmptyState = defineComponent({
+  props: ['title', 'desc'],
+  template: `
+    <div class="flex flex-col justify-center items-center text-center py-20">
+      <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <h3 class="text-xl font-medium text-white mb-2">{{ title }}</h3>
+      <p class="text-gray-500 max-w-xs">{{ desc }}</p>
+    </div>
+  `
+})
+
+const { t } = useI18n()
 const loading = ref(true)
 const error = ref('')
 const profile = ref<UserProfileVO | null>(null)
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
+
+// Tabs
+const activeTab = ref('works')
+const tabs = [
+    { id: 'works', labelKey: 'profile.works', icon: Grid, count: undefined }, // will be set
+    { id: 'likes', labelKey: 'profile.likes', icon: Heart },
+    { id: 'collections', labelKey: 'profile.collections', icon: Bookmark },
+    { id: 'history', labelKey: 'profile.history', icon: History }
+]
+
+// Content Data
+const userVideos = ref<VideoVO[]>([])
+const historyVideos = ref<VideoVO[]>([]) // Mock history
 
 // Edit state
 const isEditing = ref(false)
@@ -271,33 +303,23 @@ const handleAvatarUpload = async (event: Event) => {
   if (target.files && target.files.length > 0) {
     const file = target.files[0]
     
-    // 验证文件大小 (5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('图片大小不能超过 5MB')
       return
     }
     
     try {
-      // 乐观更新：先显示 loading 或预览（这里简单处理，直接上传）
       loading.value = true
       const newAvatarUrl = await userApi.uploadAvatar(file)
-      
-      // 更新本地状态
       if (profile.value) {
         profile.value.avatarUrl = newAvatarUrl
       }
-      
-      // 提示成功
-      // alert('头像上传成功')
-      
-      // Notify other components
       window.dispatchEvent(new Event('user-profile-updated'))
     } catch (err: any) {
       console.error('Failed to upload avatar:', err)
       alert(err.message || '头像上传失败')
     } finally {
       loading.value = false
-      // 清空 input，允许重复上传同一文件
       if (fileInput.value) {
         fileInput.value.value = ''
       }
@@ -310,9 +332,9 @@ const fetchProfile = async () => {
   error.value = ''
   try {
     const res = await userApi.getMyProfile()
-    // 假设后端返回的是 Result<UserProfileVO>，但 axios 拦截器可能已经解包了 data
-    // 如果没有解包，可能需要 res.data
-    profile.value = res as any 
+    profile.value = res as any
+    // Update tab counts if available
+    tabs[0].count = profile.value?.videoCount
   } catch (err) {
     console.error('Failed to fetch profile:', err)
     error.value = '获取个人信息失败，请稍后重试'
@@ -321,9 +343,23 @@ const fetchProfile = async () => {
   }
 }
 
+const fetchContent = async () => {
+    // Fetch user videos (works)
+    try {
+        // 使用真实接口获取我的视频
+        const res = await videoApi.getMyVideos()
+        userVideos.value = res
+        
+        // Mock history (历史记录接口暂未实现，使用推荐流模拟)
+        const feed = await videoApi.getFeed()
+        historyVideos.value = feed.slice(0, 4)
+    } catch(e) {
+        console.error("Failed to fetch content", e)
+    }
+}
+
 const openEditModal = () => {
   if (profile.value) {
-    // Copy profile data to edit form
     editForm.value = { ...profile.value }
     isEditing.value = true
   }
@@ -335,12 +371,9 @@ const saveProfile = async () => {
   saving.value = true
   try {
     await userApi.updateProfile(editForm.value)
-    // Refresh profile
     await fetchProfile()
     isEditing.value = false
-    // Notify other components
     window.dispatchEvent(new Event('user-profile-updated'))
-    // Show success message (optional, maybe alert for now)
   } catch (err) {
     console.error('Failed to update profile:', err)
     alert('更新失败，请重试')
@@ -356,22 +389,49 @@ const formatNumber = (num: number) => {
   return num
 }
 
-const formatGender = (gender?: string) => {
-  const map: Record<string, string> = {
-    'MALE': '男',
-    'FEMALE': '女',
-    'OTHER': '其他'
+const deleteVideo = async (video: VideoVO) => {
+  if (!confirm('确定要删除这个视频吗？此操作不可恢复。')) return
+  try {
+    await videoApi.deleteVideo(video.id)
+    userVideos.value = userVideos.value.filter(v => v.id !== video.id)
+    // alert('删除成功') // 避免过多弹窗，操作成功即可
+  } catch (e) {
+    console.error('Delete failed:', e)
+    alert('删除失败')
   }
-  return gender ? (map[gender] || '未知') : '保密'
 }
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString()
+const editVideo = async (video: VideoVO) => {
+  // 简单的编辑实现 MVP
+  const newTitle = prompt('修改标题:', video.title)
+  if (newTitle === null || newTitle === video.title) return
+  
+  const newDesc = prompt('修改描述:', video.description || '')
+  if (newDesc === null) return
+
+  try {
+    await videoApi.updateVideo(video.id, {
+      title: newTitle,
+      description: newDesc,
+      duration: video.duration // 保持原样
+    })
+    
+    // 更新本地数据
+    const index = userVideos.value.findIndex(v => v.id === video.id)
+    if (index !== -1) {
+      userVideos.value[index].title = newTitle
+      userVideos.value[index].description = newDesc
+    }
+    alert('更新成功')
+  } catch (e) {
+    console.error('Update failed:', e)
+    alert('更新失败')
+  }
 }
 
 onMounted(() => {
   fetchProfile()
+  fetchContent()
 })
 </script>
 
@@ -383,7 +443,14 @@ onMounted(() => {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
 }
 
-/* Light mode overrides */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 :root[data-theme='light'] .glass-panel {
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(0, 0, 0, 0.05);
@@ -392,17 +459,5 @@ onMounted(() => {
 
 :root[data-theme='light'] .text-white {
   color: #1a1a1a;
-}
-
-:root[data-theme='light'] .text-gray-300 {
-  color: #4a4a4a;
-}
-
-:root[data-theme='light'] .text-gray-400 {
-  color: #6a6a6a;
-}
-
-:root[data-theme='light'] .text-gray-500 {
-  color: #8a8a8a;
 }
 </style>

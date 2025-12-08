@@ -25,7 +25,8 @@
         <!-- 主内容区 -->
         <main class="flex-1 overflow-y-auto pt-4 md:pt-8 scroll-smooth" ref="mainScroll">
           <VideoMasonry v-if="activeTab === 'home'" :videos="videos" @open-video="openVideo" />
-          <Profile v-else-if="activeTab === 'profile'" />
+          <Profile v-else-if="activeTab === 'profile'" @open-video="openVideo" />
+          <UploadVideo v-else-if="activeTab === 'upload'" @publish-success="handleNavigation('profile')" @navigate="handleNavigation" />
           <Settings v-else-if="activeTab === 'settings'" :is-logged-in="isLoggedIn" :theme="theme" @toggle-theme="toggleTheme" @require-login="openLogin" />
         </main>
       </div>
@@ -51,6 +52,7 @@ import VideoMasonry from './components/VideoMasonry.vue'
 import VideoDetail from './components/VideoDetail.vue'
 import Login from './views/Login.vue'
 import Profile from './views/Profile.vue'
+import UploadVideo from './views/UploadVideo.vue'
 import Settings from './views/Settings.vue'
 import AdminLayout from './views/admin/AdminLayout.vue'
 import SplashScreen from './components/SplashScreen.vue'
@@ -113,8 +115,13 @@ const handleTabChange = (tabId: string) => {
   }
 }
 
-const handleNavigation = (view: 'home' | 'settings' | 'profile' | 'admin') => {
+const handleNavigation = (view: 'home' | 'settings' | 'profile' | 'admin' | 'upload') => {
   if (view === 'profile' && !isLoggedIn.value) {
+    openLogin()
+    return
+  }
+
+  if (view === 'upload' && !isLoggedIn.value) {
     openLogin()
     return
   }
@@ -127,6 +134,8 @@ const handleNavigation = (view: 'home' | 'settings' | 'profile' | 'admin') => {
     activeTab.value = 'profile'
   } else if (view === 'admin') {
     activeTab.value = 'admin'
+  } else if (view === 'upload') {
+    activeTab.value = 'upload'
   }
 }
 
@@ -135,10 +144,21 @@ const toggleTheme = () => {
   document.documentElement.setAttribute('data-theme', theme.value)
 }
 
-const openVideo = (video: VideoVO) => {
-  triggerLoad(() => {
-    currentVideo.value = video
-  })
+const openVideo = async (video: VideoVO) => {
+  try {
+    // 调用后端API获取完整的视频详情
+    const detailData = await videoApi.getDetail(video.id)
+    
+    triggerLoad(() => {
+      currentVideo.value = detailData
+    })
+  } catch (error) {
+    console.error('Failed to fetch video detail:', error)
+    // 如果获取失败，降级使用列表数据
+    triggerLoad(() => {
+      currentVideo.value = video
+    })
+  }
 }
 
 const closeVideo = () => {

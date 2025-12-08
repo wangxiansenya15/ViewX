@@ -3,7 +3,7 @@
     <!-- 封面容器 -->
     <div
       class="relative aspect-video rounded-xl overflow-hidden glass-card hover-spring shadow-lg hover:shadow-indigo-500/20">
-      <img :src="video.thumbnailUrl"
+      <img :src="video.coverUrl || video.thumbnailUrl"
         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy">
 
       <!-- 悬浮播放按钮 -->
@@ -23,22 +23,28 @@
     </div>
 
     <!-- 信息 -->
-    <div class="flex gap-3 px-1">
-      <img :src="video.uploaderAvatar" class="w-9 h-9 rounded-full border border-white/10 bg-gray-800">
-      <div class="flex flex-col gap-1">
-        <h3
-          class="text-sm font-bold text-[var(--text)] leading-tight line-clamp-2 group-hover:text-[var(--primary)] transition-colors">
-          {{ video.title }}
-        </h3>
-        <div class="flex items-center gap-2 text-xs text-[var(--muted)]">
-          <span>{{ video.uploaderNickname }}</span>
-          <span class="w-0.5 h-0.5 rounded-full bg-[var(--muted)]"></span>
-          <span>{{ video.viewCount }}观看</span>
-        </div>
+    <!-- 信息 -->
+    <div class="flex flex-col gap-1.5 px-0.5">
+      <h3
+        class="text-sm font-bold text-[var(--text)] leading-snug line-clamp-2 group-hover:text-[var(--primary)] transition-colors" :title="video.title">
+        {{ video.title }}
+      </h3>
+      
+      <!-- 视频描述 -->
+      <p v-if="video.description" class="text-xs text-[var(--muted)] line-clamp-1" :title="video.description">
+          {{ video.description }}
+      </p>
+
+      <!-- 用户信息 -->
+      <div class="flex items-center gap-2 mt-0.5">
+        <img v-if="showAvatar" :src="video.uploaderAvatar" class="w-6 h-6 rounded-full border border-white/10 bg-gray-800 object-cover shrink-0">
+        <span v-if="showAvatar" class="text-xs text-[var(--muted)] font-medium hover:text-[var(--text)] transition-colors">{{ video.uploaderNickname }}</span>
+        <!-- 只有在不显示头像的模式下（如个人页），且需要显示观看数时才显示观看数？或者根据设计决定。但用户只要名字和描述。-->
       </div>
     </div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { Play } from 'lucide-vue-next'
@@ -50,9 +56,12 @@ const formatDuration = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-defineProps<{
+withDefaults(defineProps<{
   video: VideoVO
-}>()
+  showAvatar?: boolean
+}>(), {
+  showAvatar: true
+})
 
 defineEmits(['click'])
 </script>

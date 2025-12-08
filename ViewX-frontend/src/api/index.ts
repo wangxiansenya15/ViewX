@@ -29,6 +29,8 @@ export interface LoginVO {
 export interface VideoVO {
     id: number
     title: string
+    description?: string
+    coverUrl?: string
     thumbnailUrl: string
     duration: number
     viewCount: number
@@ -46,6 +48,7 @@ export interface VideoDetailVO {
     title: string
     description: string
     videoUrl: string
+    coverUrl?: string
     thumbnailUrl: string
     duration: number
     category: string
@@ -70,8 +73,9 @@ export interface VideoDetailVO {
 // 视频创建 DTO
 export interface VideoCreateDTO {
     title: string
+    duration: number
     description?: string
-    videoUrl: string
+    coverUrl?: string
     thumbnailUrl?: string
     category?: string
     subcategory?: string
@@ -142,6 +146,11 @@ export const videoApi = {
         return request.get<VideoVO[]>('/recommend/trending', { params: { page, size } })
     },
 
+    // 获取我的视频
+    getMyVideos() {
+        return request.get<VideoVO[]>('/videos/my')
+    },
+
     // 获取推荐视频流
     getFeed(page = 1, size = 10) {
         return request.get<VideoVO[]>('/recommend/feed', { params: { page, size } })
@@ -152,11 +161,25 @@ export const videoApi = {
         return request.get<VideoDetailVO>(`/videos/${id}`)
     },
 
-    // 上传视频文件
-    uploadVideoFile(file: File) {
+    // 上传视频及元数据
+    uploadVideo(file: File, data: VideoCreateDTO) {
         const formData = new FormData()
         formData.append('file', file)
-        return request.post<string>('/videos/upload', formData, {
+        formData.append('title', data.title)
+        formData.append('duration', data.duration.toString())
+
+        if (data.description) formData.append('description', data.description)
+        if (data.coverUrl) formData.append('coverUrl', data.coverUrl)
+        if (data.thumbnailUrl) formData.append('thumbnailUrl', data.thumbnailUrl)
+        if (data.category) formData.append('category', data.category)
+        if (data.subcategory) formData.append('subcategory', data.subcategory)
+        if (data.visibility) formData.append('visibility', data.visibility)
+
+        if (data.tags && data.tags.length > 0) {
+            data.tags.forEach(tag => formData.append('tags', tag))
+        }
+
+        return request.post<number>('/videos', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         })
     },
@@ -166,18 +189,20 @@ export const videoApi = {
         const formData = new FormData()
         formData.append('file', file)
         return request.post<string>('/videos/upload/cover', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
         })
     },
 
-    // 创建视频
-    createVideo(data: VideoCreateDTO) {
-        return request.post<number>('/videos', data)
+    // 更新视频
+    updateVideo(id: string, data: Partial<VideoCreateDTO>) {
+        return request.put<void>(`/videos/${id}`, data)
     },
 
-    // 更新视频
-    updateVideo(id: number, data: VideoUpdateDTO) {
-        return request.put<string>(`/videos/${id}`, data)
+    // 删除视频
+    deleteVideo(id: string) {
+        return request.delete<void>(`/videos/${id}`)
     }
 }
 
