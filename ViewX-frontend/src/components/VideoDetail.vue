@@ -1,404 +1,507 @@
 <template>
-  <transition name="fade">
-    <div v-if="video" class="fixed inset-0 z-50 flex bg-[#050505] animate-in fade-in duration-300">
+  <div class="fixed inset-0 z-50 bg-[#0f0f0f] flex flex-col md:flex-row text-white overflow-hidden">
+    
+    <!-- 返回按钮 (Mobile: Top Left, Desktop: Top Left in content area) -->
+    <button 
+      @click="$emit('close')" 
+      class="absolute top-4 left-4 z-[60] p-2 rounded-full bg-black/50 hover:bg-white/20 backdrop-blur-md transition-colors text-white"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+    </button>
 
-      <!-- 返回按钮 -->
-      <div class="absolute top-6 left-6 z-50">
-        <button @click="$emit('close')"
-          class="p-3 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white spring-transition click-spring group">
-          <ArrowLeft class="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-        </button>
+    <!-- 主内容区 (视频播放器 / 图片预览) -->
+    <div class="flex-1 bg-black relative flex items-center justify-center h-[50vh] md:h-full">
+      <div v-if="loading" class="absolute inset-0 flex items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
 
-      <!-- 内容容器 -->
-      <div class="flex flex-col lg:flex-row w-full h-full">
+      <div v-else-if="error" class="text-center p-8">
+        <p class="text-red-500 mb-4">{{ error }}</p>
+        <button @click="loadContent" class="px-4 py-2 bg-indigo-600 rounded-lg">重试</button>
+      </div>
 
-        <!-- 视频播放区 (左侧/上方) -->
-        <div class="flex-1 relative bg-black flex items-center justify-center group overflow-hidden">
-          <!-- 环境光背景 -->
-          <div class="absolute inset-0 opacity-30 blur-3xl scale-125 transition-all duration-1000"
-            :style="`background-image: url(${video.thumbnailUrl}); background-size: cover; background-position: center;`">
-          </div>
+      <div v-else class="w-full h-full flex items-center justify-center relative group/player">
+        
+        <!-- VIDEO PLAYER -->
+        <div v-if="content?.contentType === 'VIDEO'" class="w-full h-full relative">
+          <video 
+            ref="videoRef"
+            :src="content.primaryUrl" 
+            class="w-full h-full object-contain"
+            @timeupdate="onTimeUpdate"
+            @loadedmetadata="onLoadedMetadata"
+            @ended="isPlaying = false"
+            @click="togglePlay"
+          ></video>
 
-          <!-- 真实播放器 -->
-          <div class="relative w-full max-w-5xl aspect-video bg-black shadow-2xl overflow-hidden group/player" 
-               @mouseenter="showControls = true" @mouseleave="showControls = false">
+          <!-- Video Controls Overlay -->
+          <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300" 
+               :class="isPlaying && !showControls ? 'opacity-0 hover:opacity-100' : 'opacity-100'">
             
-            <video 
-              ref="videoPlayer"
-              :src="video.videoUrl"
-              :poster="video.coverUrl || video.thumbnailUrl"
-              class="w-full h-full object-contain"
-              @timeupdate="handleTimeUpdate"
-              @ended="isPlaying = false"
-              @click="togglePlay"
-              autoplay
-            ></video>
-
-            <!-- 弹幕层 -->
-            <div class="absolute inset-0 overflow-hidden z-10 pointer-events-none mask-linear-gradient" v-show="showDanmaku">
-              <div v-for="dm in activeDanmakuList" :key="dm.id"
-                class="danmaku-item text-white/90 text-lg lg:text-2xl font-bold drop-shadow-md"
-                :style="{ top: dm.top + '%', animationDuration: dm.speed + 's', fontSize: dm.size + 'px' }">
-                {{ dm.text }}
-              </div>
+            <!-- Progress Bar -->
+            <div 
+              class="w-full h-1.5 bg-white/20 rounded-full mb-4 cursor-pointer relative group/progress"
+              @click="seek"
+            >
+              <div class="absolute h-full bg-indigo-500 rounded-full" :style="{ width: `${progress}%` }"></div>
+              <div class="absolute h-3 w-3 bg-white rounded-full top-1/2 -mt-1.5 -ml-1.5 shadow-md transform scale-0 group-hover/progress:scale-100 transition-transform" :style="{ left: `${progress}%` }"></div>
             </div>
 
-            <!-- 播放器控制栏 -->
-            <div
-              class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 z-20"
-              :class="showControls || !isPlaying ? 'opacity-100' : 'opacity-0'">
-              
-              <!-- 进度条 -->
-              <div
-                class="w-full h-1 bg-white/20 rounded-full mb-4 cursor-pointer hover:h-1.5 transition-all relative group/progress"
-                @click="seekVideo">
-                <div class="h-full bg-indigo-500 rounded-full relative" :style="{ width: progress + '%' }">
-                  <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow scale-0 group-hover/progress:scale-100 transition-transform"></div>
-                </div>
-              </div>
-              
-              <!-- 按钮组 -->
-              <div class="flex justify-between items-center">
-                <div class="flex gap-4 items-center">
-                  <button @click="togglePlay" class="hover:text-indigo-400 transition-colors">
-                    <component :is="isPlaying ? 'Pause' : 'Play'" class="w-6 h-6 fill-white" />
+            <!-- Buttons Row -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <!-- Play/Pause -->
+                <button @click="togglePlay" class="text-white hover:text-indigo-400 transition-colors">
+                  <component :is="isPlaying ? PauseIcon : PlayIcon" class="w-8 h-8 fill-current" />
+                </button>
+
+                <!-- Volume -->
+                <div class="flex items-center gap-2 group/volume relative">
+                  <button @click="toggleMute" class="text-white hover:text-indigo-400">
+                    <component :is="isMuted || volume === 0 ? VolumeXIcon : Volume2Icon" class="w-6 h-6" />
                   </button>
-                  <Volume2 class="w-6 h-6 cursor-pointer hover:text-indigo-400" />
-                  <span class="text-sm font-medium">{{ formatDuration(currentTime) }} / {{ formatDuration(video.duration) }}</span>
+                  <div class="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300">
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="1" 
+                      step="0.1" 
+                      v-model.number="volume" 
+                      @input="updateVolume"
+                      class="w-20 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    />
+                  </div>
                 </div>
-                <div class="flex gap-4 items-center">
-                  <button 
-                    @click="showDanmaku = !showDanmaku" 
-                    class="text-sm font-bold border border-white/30 px-2 rounded hover:bg-white/10 transition-colors"
-                    :class="showDanmaku ? 'text-indigo-400 border-indigo-400' : 'text-white'"
-                  >弹</button>
-                  <span class="text-sm font-bold border border-white/30 px-2 rounded">4K</span>
-                  <button @click="toggleFullscreen" class="hover:text-indigo-400 transition-colors">
-                    <Maximize class="w-6 h-6" />
+
+                <!-- Time -->
+                <span class="text-xs text-gray-300 font-mono">
+                  {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+                </span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                <!-- Playback Speed -->
+                <div class="relative group/speed">
+                  <button class="text-sm font-medium hover:text-indigo-400 px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-colors">
+                    {{ playbackRate }}x
                   </button>
+                  <div class="absolute bottom-full right-0 mb-2 bg-[#1a1a1a] border border-white/10 rounded-lg overflow-hidden hidden group-hover/speed:block min-w-[80px]">
+                    <button 
+                      v-for="rate in [0.5, 1.0, 1.25, 1.5, 2.0]" 
+                      :key="rate" 
+                      @click="setPlaybackRate(rate)"
+                      class="block w-full text-left px-4 py-2 text-sm hover:bg-white/10"
+                      :class="playbackRate === rate ? 'text-indigo-500 font-bold' : 'text-gray-300'"
+                    >
+                      {{ rate }}x
+                    </button>
+                  </div>
                 </div>
+
+                <!-- Fullscreen -->
+                <button @click="toggleFullscreen" class="text-white hover:text-indigo-400">
+                   <MaximizeIcon class="w-5 h-5" />
+                </button>
               </div>
             </div>
-
-            <!-- 中心播放按钮 (暂停时显示) -->
-            <div v-if="!isPlaying" 
-                 class="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/30 backdrop-blur-[2px] transition-all">
-              <button
-                class="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20 scale-100 animate-in zoom-in duration-200">
-                <Play class="w-8 h-8 fill-white ml-1" />
-              </button>
-            </div>
+          </div>
+          
+          <!-- Center Play Button (Initial/Paused) -->
+          <div v-if="!isPlaying" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+             <div class="w-20 h-20 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                <PlayIcon class="w-10 h-10 ml-1 text-white fill-white" />
+             </div>
           </div>
         </div>
 
-        <!-- 侧边互动区 (右侧/下方) -->
-        <div
-          class="w-full lg:w-[400px] h-1/2 lg:h-full glass-panel border-l border-white/10 border-t-0 flex flex-col z-20">
+        <!-- IMAGE PLAYER -->
+        <div v-else-if="content?.contentType === 'IMAGE'" class="w-full h-full flex items-center justify-center p-4">
+           <img :src="content.primaryUrl" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+        </div>
 
-          <!-- UP主信息 -->
-          <div class="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
-            <div class="flex items-center gap-3">
-              <img :src="video.uploaderAvatar" class="w-10 h-10 rounded-full border border-indigo-500/30">
-              <div>
-                <h3 class="font-bold text-sm text-gray-100">{{ video.uploaderNickname }}</h3>
-                <p class="text-xs text-gray-400 mt-0.5">粉丝 58.2万</p>
-              </div>
-            </div>
-            <button
-              class="px-5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-full spring-transition click-spring shadow-lg shadow-indigo-600/20">
-              关注
-            </button>
-          </div>
+        <!-- IMAGE SET PLAYER -->
+        <div v-else-if="content?.contentType === 'IMAGE_SET'" class="w-full h-full relative group/gallery">
+           <!-- Main Image -->
+           <div class="w-full h-full flex items-center justify-center p-4">
+              <img :src="currentImageSetUrl" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl transition-opacity duration-300" />
+           </div>
 
-          <!-- 视频标题与数据 + AI 入口 -->
-          <div class="px-6 py-4 border-b border-white/5 space-y-3">
-            <h2 class="text-lg font-bold leading-snug text-white">{{ video.title }}</h2>
-            <div class="flex items-center gap-4 text-gray-400 text-xs">
-              <div class="flex items-center gap-1 hover:text-red-400 cursor-pointer transition-colors">
-                <Flame class="w-4 h-4" /> 2.4万
-              </div>
-              <div class="flex items-center gap-1 hover:text-blue-400 cursor-pointer transition-colors">
-                <MessageCircle class="w-4 h-4" /> 1,024
-              </div>
-              <span class="ml-auto text-gray-600">{{ formatDate(video.publishedAt) }}</span>
-            </div>
+           <!-- Navigation Arrows -->
+           <button 
+             v-if="imageSetIndex > 0"
+             @click="prevImage" 
+             class="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 hover:bg-white/20 backdrop-blur text-white opacity-0 group-hover/gallery:opacity-100 transition-all"
+           >
+             <ChevronLeftIcon class="w-8 h-8" />
+           </button>
+           <button 
+             v-if="content.mediaUrls && imageSetIndex < content.mediaUrls.length - 1"
+             @click="nextImage" 
+             class="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 hover:bg-white/20 backdrop-blur text-white opacity-0 group-hover/gallery:opacity-100 transition-all"
+           >
+             <ChevronRightIcon class="w-8 h-8" />
+           </button>
 
-            <!-- AI 视频洞察区域 -->
-            <div class="mt-2">
-              <button v-if="!aiSummary && !isGeneratingAI" @click="generateVideoInsight"
-                class="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold hover:bg-white/5 transition-all group">
-                <Sparkles class="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
-                ✨ 生成 AI 视频洞察
+           <!-- Indicators / Thumbs -->
+           <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 overflow-x-auto max-w-[90%] p-2 rounded-xl bg-black/40 backdrop-blur-md">
+              <button 
+                v-for="(url, idx) in content.mediaUrls" 
+                :key="idx"
+                @click="imageSetIndex = idx"
+                class="w-12 h-12 rounded-lg border-2 overflow-hidden transition-all shrink-0"
+                :class="imageSetIndex === idx ? 'border-indigo-500 scale-110' : 'border-transparent opacity-60 hover:opacity-100'"
+              >
+                <img :src="url" class="w-full h-full object-cover" />
               </button>
+           </div>
+        </div>
 
-              <div v-if="isGeneratingAI"
-                class="w-full p-4 rounded-xl ai-card animate-pulse flex items-center justify-center gap-2 text-xs text-indigo-200">
-                <Loader2 class="w-3.5 h-3.5 animate-spin" />
-                Gemini 正在分析视频内容...
-              </div>
+      </div>
+    </div>
 
-              <div v-if="aiSummary" class="p-4 rounded-xl ai-card space-y-2 animate-in fade-in slide-in-from-bottom-2">
-                <div class="flex items-center gap-2 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-1">
-                  <Bot class="w-3.5 h-3.5" />
-                  Gemini Insight
-                </div>
-                <div class="text-xs text-gray-200 leading-relaxed space-y-2" v-html="renderMarkdown(aiSummary)"></div>
-              </div>
-            </div>
+    <!-- 侧边栏信息区 -->
+    <div class="w-full md:w-[400px] bg-[#1a1a1a] border-l border-white/5 flex flex-col h-[50vh] md:h-full z-20 shadow-2xl">
+      <div v-if="content" class="flex-1 overflow-y-auto p-6 scrollbar-thin">
+        <!-- Author Info -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+             <div class="w-10 h-10 rounded-full bg-gray-700 overflow-hidden border border-white/10">
+                <img :src="content.uploaderAvatar" class="w-full h-full object-cover" />
+             </div>
+             <div>
+                <h3 class="font-bold text-white text-sm">{{ content.uploaderNickname }}</h3>
+                <span class="text-xs text-gray-400">Published on {{ formatDate(content.publishedAt) }}</span>
+             </div>
           </div>
+          <button 
+            @click="toggleFollow" 
+            class="px-4 py-1.5 rounded-full text-xs font-bold transition-all"
+            :class="content.isFollowingUploader ? 'bg-white/10 text-gray-300' : 'bg-indigo-600 text-white hover:bg-indigo-700'"
+          >
+            {{ content.isFollowingUploader ? '已关注' : '关注' }}
+          </button>
+        </div>
 
-          <!-- 评论/弹幕列表 -->
-          <div class="flex-1 overflow-y-auto p-0 relative bg-black/20" ref="commentList">
-            <!-- 评论列表 -->
-            <div class="p-4 space-y-5">
-              <div v-for="(comment, index) in comments" :key="index" class="flex gap-3 animate-slide-up"
-                :style="{ animationDelay: index * 50 + 'ms' }">
-                <img :src="`https://api.dicebear.com/7.x/notionists/svg?seed=${index + 5}`"
-                  class="w-8 h-8 rounded-full bg-gray-700 mt-1">
-                <div class="flex-1">
-                  <div class="flex justify-between items-baseline">
-                    <span class="text-xs font-bold text-gray-400">用户_{{ 1000 + index }}</span>
-                    <span class="text-[10px] text-gray-600">2小时前</span>
-                  </div>
-                  <p class="text-sm text-gray-200 mt-1 leading-relaxed">{{ comment }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        <!-- Title & Desc -->
+        <h1 class="text-xl font-bold text-white mb-2 leading-snug">{{ content.title }}</h1>
+        <div class="flex flex-wrap gap-2 mb-4" v-if="content.tags && content.tags.length">
+           <span v-for="tag in content.tags" :key="tag" class="text-xs text-indigo-400">#{{ tag }}</span>
+        </div>
+        <p class="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap mb-6 border-b border-white/5 pb-6">
+           {{ content.description || '暂无描述' }}
+        </p>
 
-          <!-- 底部输入栏 (带 AI 辅助) -->
-          <div class="p-4 bg-black/40 backdrop-blur-lg border-t border-white/5">
-            <div class="relative w-full">
-              <input v-model="inputDanmaku" @keyup.enter="send" type="text"
-                :placeholder="isMagicLoading ? 'Gemini 正在思考有趣的弹幕...' : '发个弹幕见证当下...'" :disabled="isMagicLoading"
-                class="w-full bg-white/5 border border-white/10 rounded-full py-3 pl-10 pr-12 text-sm text-white focus:bg-white/10 focus:border-indigo-500/50 focus:outline-none transition-all placeholder-gray-500 disabled:opacity-50">
+        <!-- Interactions -->
+        <div class="flex items-center justify-between mb-8">
+           <button 
+             @click="toggleLike"
+             class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+             :class="{'text-pink-500 bg-pink-500/10': content.isLiked}"
+           >
+             <HeartIcon class="w-5 h-5" :class="{'fill-current': content.isLiked}" />
+             <span>{{ formatNumber(content.likeCount) }}</span>
+           </button>
 
-              <!-- AI Magic Button -->
-              <button @click="magicComment" :disabled="isMagicLoading" title="AI 帮你写评论"
-                class="absolute left-1.5 top-1.5 p-1.5 rounded-full hover:bg-indigo-500/20 text-indigo-400 transition-colors group z-10">
-                <component :is="isMagicLoading ? Loader2 : Sparkles"
-                  :class="['w-4 h-4', isMagicLoading ? 'animate-spin' : '']" />
-              </button>
+           <button 
+             @click="toggleFavorite"
+             class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+             :class="{'text-yellow-500 bg-yellow-500/10': content.isFavorited}"
+           >
+             <BookmarkIcon class="w-5 h-5" :class="{'fill-current': content.isFavorited}" />
+             <span>收藏</span>
+           </button>
 
-              <button @click="send"
-                class="absolute right-2 top-2 p-1.5 bg-indigo-600 rounded-full hover:bg-indigo-500 text-white transition-colors click-spring">
-                <Send class="w-4 h-4 ml-0.5" />
-              </button>
-            </div>
-          </div>
+           <button class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+             <Share2Icon class="w-5 h-5" />
+             <span>分享</span>
+           </button>
+        </div>
 
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-xl border border-white/5 mb-6">
+           <div class="text-center">
+              <div class="text-xs text-gray-500 mb-1">观看</div>
+              <div class="text-lg font-bold">{{ formatNumber(content.viewCount) }}</div>
+           </div>
+           <div class="text-center">
+              <div class="text-xs text-gray-500 mb-1">评论</div>
+              <div class="text-lg font-bold">{{ formatNumber(content.commentCount) }}</div>
+           </div>
+        </div>
+
+        <!-- Comments Placeholder -->
+        <div>
+           <h3 class="font-bold mb-4">评论 ({{ content.commentCount }})</h3>
+           <div class="text-center py-8 text-gray-500 text-sm bg-white/5 rounded-xl border border-white/5 border-dashed">
+              评论功能开发中...
+           </div>
         </div>
       </div>
     </div>
-  </transition>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { ArrowLeft, Play, Pause, Volume2, Maximize, Flame, MessageCircle, Sparkles, Loader2, Bot, Send } from 'lucide-vue-next'
-import { marked } from 'marked'
-import type { VideoVO } from '@/api'
+import { ref, computed, watch } from 'vue'
+import { contentApi, interactionApi, videoApi, type ContentDetailVO, type VideoVO } from '@/api'
+import { 
+  Play as PlayIcon, 
+  Pause as PauseIcon, 
+  Volume2 as Volume2Icon, 
+  VolumeX as VolumeXIcon,
+  Maximize as MaximizeIcon,
+  Heart as HeartIcon, 
+  Bookmark as BookmarkIcon, 
+  Share2 as Share2Icon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
+} from 'lucide-vue-next'
 
 const props = defineProps<{
-  video: VideoVO
+  video: VideoVO | null
 }>()
 
-const videoPlayer = ref<HTMLVideoElement | null>(null)
+const emit = defineEmits(['close'])
+
+const loading = ref(true)
+const error = ref('')
+const content = ref<ContentDetailVO | null>(null)
+
+// Player State
+const videoRef = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const currentTime = ref(0)
+const duration = ref(0)
 const progress = ref(0)
-const showControls = ref(false)
-const showDanmaku = ref(true)
+const volume = ref(1)
+const isMuted = ref(false)
+const playbackRate = ref(1.0)
+const showControls = ref(true)
+const isDragging = ref(false)
 
-const togglePlay = () => {
-  if (!videoPlayer.value) return
-  if (isPlaying.value) {
-    videoPlayer.value.pause()
-  } else {
-    videoPlayer.value.play()
-    isPlaying.value = true
+// Image Set State
+const imageSetIndex = ref(0)
+
+const currentImageSetUrl = computed(() => {
+  if (content.value?.contentType === 'IMAGE_SET' && content.value.mediaUrls) {
+    return content.value.mediaUrls[imageSetIndex.value]
+  }
+  return ''
+})
+
+// === Fetch Data ===
+const loadContent = async () => {
+  if (!props.video) return
+  
+  loading.value = true
+  error.value = ''
+  
+  try {
+    // 优先尝试从新内容系统获取
+    try {
+      // 传入 skipErrorHandler: true 以避免全局错误提示干扰用户（因为 404 是预期的兼容性流程）
+      // 同时通过 headers 和 params 传递以防止 axios 过滤或 header 类型不兼容
+      const res = await contentApi.getContentDetail(props.video.id, { 
+        skipErrorHandler: true,
+        headers: { 'X-Skip-Error-Handler': 'true' },
+        params: { '_skip_error': 'true' }
+      })
+      content.value = res
+    } catch (err: any) {
+      // 静默失败：404 说明是旧版视频数据，直接降级尝试从 videoApi 获取
+      const videoRes = await videoApi.getDetail(props.video.id)
+      
+      // 适配旧版数据结构到新版 ContentDetailVO
+      content.value = {
+        ...videoRes,
+        contentType: 'VIDEO',
+        primaryUrl: videoRes.videoUrl, // 映射 videoUrl -> primaryUrl
+        mediaUrls: [],
+        status: 'PUBLISHED', // 默认状态
+        visibility: 'PUBLIC' // 默认可见性
+      } as unknown as ContentDetailVO
+    }
+  } catch (err: any) {
+    console.error(err)
+    error.value = '加载内容失败'
+  } finally {
+    loading.value = false
   }
 }
 
-const handleTimeUpdate = () => {
-  if (!videoPlayer.value) return
-  currentTime.value = videoPlayer.value.currentTime
-  progress.value = (currentTime.value / props.video.duration) * 100
-  isPlaying.value = !videoPlayer.value.paused
+watch(() => props.video, (newVal) => {
+  if (newVal) {
+    loadContent()
+  } else {
+    content.value = null
+  }
+}, { immediate: true })
+
+// === Video Controls ===
+const togglePlay = () => {
+  if (!videoRef.value) return
+  if (videoRef.value.paused) {
+    videoRef.value.play()
+    isPlaying.value = true
+  } else {
+    videoRef.value.pause()
+    isPlaying.value = false
+  }
 }
 
-const seekVideo = (e: MouseEvent) => {
-  if (!videoPlayer.value) return
-  const progressBar = e.currentTarget as HTMLElement
-  const rect = progressBar.getBoundingClientRect()
-  const x = e.clientX - rect.left
+const onTimeUpdate = () => {
+  if (!videoRef.value || isDragging.value) return
+  currentTime.value = videoRef.value.currentTime
+  progress.value = (currentTime.value / duration.value) * 100
+}
+
+const onLoadedMetadata = () => {
+  if (!videoRef.value) return
+  duration.value = videoRef.value.duration
+}
+
+const seek = (event: MouseEvent) => {
+  if (!videoRef.value) return
+  const target = event.currentTarget as HTMLElement
+  const rect = target.getBoundingClientRect()
+  const x = event.clientX - rect.left
   const percent = x / rect.width
-  videoPlayer.value.currentTime = percent * props.video.duration
+  const newTime = percent * duration.value
+  videoRef.value.currentTime = newTime
+  currentTime.value = newTime
+  progress.value = percent * 100
+}
+
+const updateVolume = () => {
+  if (!videoRef.value) return
+  videoRef.value.volume = volume.value
+  isMuted.value = volume.value === 0
+}
+
+const toggleMute = () => {
+  if (!videoRef.value) return
+  if (isMuted.value) {
+    volume.value = 1
+    videoRef.value.volume = 1
+    isMuted.value = false
+  } else {
+    volume.value = 0
+    videoRef.value.volume = 0
+    isMuted.value = true
+  }
+}
+
+const setPlaybackRate = (rate: number) => {
+  if (!videoRef.value) return
+  videoRef.value.playbackRate = rate
+  playbackRate.value = rate
 }
 
 const toggleFullscreen = () => {
-  if (!videoPlayer.value) return
-  if (document.fullscreenElement) {
-    document.exitFullscreen()
+  const container = videoRef.value?.parentElement
+  if (!container) return
+  if (!document.fullscreenElement) {
+    container.requestFullscreen()
   } else {
-    videoPlayer.value.parentElement?.requestFullscreen()
+    document.exitFullscreen()
   }
 }
 
-watch(() => isPlaying.value, (val) => {
-  if (val) {
-    startDanmakuEngine()
-  } else {
-    // 暂停时也可以选择不停止弹幕，或者暂停弹幕
-    // stopDanmakuEngine() 
+// === Image Set Controls ===
+const prevImage = () => {
+  if (imageSetIndex.value > 0) {
+    imageSetIndex.value--
   }
-})
+}
 
-const formatDuration = (seconds: number) => {
-  const floored = Math.floor(seconds)
-  const m = Math.floor(floored / 60)
-  const s = floored % 60
+const nextImage = () => {
+  if (content.value?.mediaUrls && imageSetIndex.value < content.value.mediaUrls.length - 1) {
+    imageSetIndex.value++
+  }
+}
+
+// === Interaction ===
+const toggleLike = async () => {
+  if (!content.value) return
+  try {
+    await interactionApi.toggleLike(content.value.id)
+    content.value.isLiked = !content.value.isLiked
+    content.value.likeCount += content.value.isLiked ? 1 : -1
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const toggleFavorite = async () => {
+  if (!content.value) return
+  try {
+    await interactionApi.toggleFavorite(content.value.id)
+    content.value.isFavorited = !content.value.isFavorited
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const toggleFollow = () => {
+  if (!content.value) return
+  // TODO: Call follow API
+  content.value.isFollowingUploader = !content.value.isFollowingUploader
+}
+
+// === Helpers ===
+const formatTime = (seconds: number) => {
+  if (!seconds || isNaN(seconds)) return '0:00'
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleDateString()
+  return new Date(dateStr).toLocaleDateString()
 }
 
-const emit = defineEmits(['close'])
-
-// State
-const inputDanmaku = ref('')
-const activeDanmakuList = ref<any[]>([])
-const aiSummary = ref("")
-const isGeneratingAI = ref(false)
-const isMagicLoading = ref(false)
-const comments = ref([
-  "这个UI设计太绝了，求开源！",
-  "up主高产似母猪",
-  "第一视角既视感太强了",
-  "背景音乐请问是什么？",
-  "这就去买食材做起来",
-  "这就是未来的交互方式吗",
-  "火钳刘明",
-  "不仅视频质量高，网页做得也太好看了"
-])
-
-const defaultDanmaku = ["前方高能", "好听到怀孕", "见证历史", "太强了", "又在骗我买装备", "泪目", "这个转场丝滑", "233333"]
-let danmakuInterval: any = null
-
-// Methods
-const startDanmakuEngine = () => {
-  if (danmakuInterval) clearInterval(danmakuInterval)
-  danmakuInterval = setInterval(() => {
-    if (Math.random() > 0.4) {
-      const text = defaultDanmaku[Math.floor(Math.random() * defaultDanmaku.length)]
-      addDanmaku(text)
-    }
-  }, 800)
+const formatNumber = (num: number) => {
+  if (!num) return '0'
+  if (num >= 10000) return (num / 10000).toFixed(1) + 'w'
+  return num
 }
 
-const stopDanmakuEngine = () => {
-  if (danmakuInterval) clearInterval(danmakuInterval)
-  activeDanmakuList.value = []
-}
-
-const addDanmaku = (text: string, isSelf = false) => {
-  const id = Date.now() + Math.random()
-  const dm = {
-    id,
-    text,
-    top: Math.random() * 80, // 0-80% top
-    speed: isSelf ? 8 : 6 + Math.random() * 6, // 速度
-    size: isSelf ? 24 : 16 + Math.random() * 8 // 字体大小
-  }
-  activeDanmakuList.value.push(dm)
-
-  // 动画结束后清理（简单处理）
-  setTimeout(() => {
-    activeDanmakuList.value = activeDanmakuList.value.filter(d => d.id !== id)
-  }, 15000)
-}
-
-const send = () => {
-  if (!inputDanmaku.value.trim()) return
-  // 发送弹幕
-  addDanmaku(inputDanmaku.value, true)
-  // 添加评论
-  comments.value.unshift(inputDanmaku.value)
-  inputDanmaku.value = ''
-}
-
-// AI Functions (Mocked for now as per original code structure, but using fetch if key exists)
-const apiKey = "" // Inject key if available
-
-async function callGemini(prompt: string) {
-  if (!apiKey) {
-    // Mock response if no key
-    return new Promise(resolve => setTimeout(() => resolve("AI Key 未配置，这是模拟的回复。"), 1000))
-  }
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    })
-    const data = await response.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "AI 暂时休息了，请稍后再试。"
-  } catch (error) {
-    console.error("Gemini API Error:", error)
-    return "网络连接异常。"
-  }
-}
-
-const generateVideoInsight = async () => {
-  if (!props.video || isGeneratingAI.value) return
-  isGeneratingAI.value = true
-
-  isGeneratingAI.value = true
-
-  const prompt = `你是 ViewX 视频平台的 AI 助手。请根据视频标题'${props.video.title}'和作者'${props.video.uploaderNickname}'，生成一段简短精彩的视频内容简介（50字以内）以及三个看点（bullet points）。请用中文回答，语气轻松吸引人，并适当使用 emoji。`
-
-  aiSummary.value = await callGemini(prompt) as string
-  isGeneratingAI.value = false
-}
-
-const magicComment = async () => {
-  if (!props.video || isMagicLoading.value) return
-  isMagicLoading.value = true
-
-  const prompt = `请为标题为'${props.video.title}'的视频写一条简短有趣的中文评论或弹幕（30字以内），带一个emoji，风格要像真实的互联网用户。只返回评论内容本身。`
-
-  const result = await callGemini(prompt) as string
-  inputDanmaku.value = result.replace(/^["']|["']$/g, '')
-  isMagicLoading.value = false
-}
-
-const renderMarkdown = (text: string) => {
-  return marked.parse(text)
-}
-
-// Lifecycle
-onMounted(() => {
-  startDanmakuEngine()
-})
-
-onUnmounted(() => {
-  stopDanmakuEngine()
-})
-
-watch(() => props.video, (newVal) => {
-  if (newVal) {
-    aiSummary.value = ""
-    activeDanmakuList.value = []
-    startDanmakuEngine()
-  } else {
-    stopDanmakuEngine()
-  }
-})
 </script>
+
+<style scoped>
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Custom range slider styling */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: white;
+  margin-top: -4px;
+  cursor: pointer;
+}
+input[type=range]::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+}
+</style>

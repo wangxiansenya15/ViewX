@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="w-20 lg:w-64 hidden md:flex flex-col glass-panel border-t-0 border-b-0 border-r border-[var(--border)] pt-6 pb-6 gap-6 z-20 transition-all duration-300 h-full">
+    class="w-20 lg:w-64 hidden md:flex flex-col glass-panel border-t-0 border-b-0 border-r border-[var(--border)] pt-6 pb-6 gap-6 z-20 h-full">
 
     <nav class="flex flex-col px-3 gap-1">
       <a v-for="item in navItems" :key="item.id" @click="activeTab = item.id; $emit('change-tab', item.id)"

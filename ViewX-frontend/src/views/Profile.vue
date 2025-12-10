@@ -1,9 +1,34 @@
 <template>
-  <div class="min-h-screen bg-[#0f0f0f] pt-20 pb-10 px-4 sm:px-6 lg:px-8">
+  <div class="h-full w-full overflow-y-auto bg-[#0f0f0f] pt-20 pb-20 px-4 sm:px-6 lg:px-8 custom-scrollbar">
     <div class="max-w-7xl mx-auto">
       
+      <!-- Guest State -->
+      <div v-if="!isLoggedIn" class="h-[80vh] flex flex-col items-center justify-center text-center">
+         <div class="glass-panel w-full max-w-sm p-10 rounded-3xl relative overflow-hidden">
+             <!-- Decor -->
+             <div class="absolute top-0 right-0 -mr-10 -mt-10 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+             <div class="absolute bottom-0 left-0 -ml-10 -mb-10 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl"></div>
+
+             <div class="relative z-10 flex flex-col items-center">
+                 <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/20">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                     </svg>
+                 </div>
+                 <h2 class="text-2xl font-bold text-white mb-2">登录 ViewX</h2>
+                 <p class="text-gray-400 mb-8">登录后查看个人主页、收藏视频并与其他用户互动</p>
+                 <button 
+                    @click="$router.push('/login')" 
+                    class="w-full py-3.5 bg-white text-black font-bold rounded-xl active:scale-95 transition-transform hover:bg-gray-100"
+                 >
+                    立即登录
+                 </button>
+             </div>
+         </div>
+      </div>
+
       <!-- Loading State -->
-      <div v-if="loading" class="flex justify-center items-center h-64">
+      <div v-else-if="loading" class="flex justify-center items-center h-64">
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       </div>
 
@@ -130,7 +155,7 @@
             <div v-if="activeTab === 'works'">
               <div v-if="userVideos.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                  <div v-for="video in userVideos" :key="video.id" class="relative group/item">
-                    <VideoCard :video="video" :show-avatar="false" @click="$emit('open-video', video)" />
+                    <VideoCard :video="video" :show-avatar="false" @click="openVideoDetail ? openVideoDetail(video) : $emit('open-video', video)" />
                     <!-- 操作按钮 -->
                     <div class="absolute top-2 right-2 flex gap-2 opacity-0 group-hover/item:opacity-100 transition-opacity z-10">
                         <button @click.stop="editVideo(video)" class="p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-indigo-600 transition-colors" title="编辑">
@@ -244,7 +269,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, defineComponent } from 'vue'
+import { ref, onMounted, defineComponent, reactive } from 'vue'
 import { userApi, videoApi, type UserProfileVO, type VideoVO } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { Grid, Heart, Bookmark, History, Lock, Trash, Edit2 } from 'lucide-vue-next'
@@ -252,6 +277,9 @@ import VideoCard from '@/components/VideoCard.vue'
 
 // Script
 const emit = defineEmits(['open-video'])
+import { inject, type Ref } from 'vue'
+const openVideoDetail = inject<(v: VideoVO) => void>('openDesktopVideo')
+const isLoggedIn = inject<Ref<boolean>>('isLoggedIn')
 
 // Helper component for empty states
 const EmptyState = defineComponent({
@@ -277,12 +305,12 @@ const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
 
 // Tabs
 const activeTab = ref('works')
-const tabs = [
-    { id: 'works', labelKey: 'profile.works', icon: Grid, count: undefined }, // will be set
+const tabs = reactive([
+    { id: 'works', labelKey: 'profile.works', icon: Grid, count: undefined as number | undefined }, // will be set
     { id: 'likes', labelKey: 'profile.likes', icon: Heart },
     { id: 'collections', labelKey: 'profile.collections', icon: Bookmark },
     { id: 'history', labelKey: 'profile.history', icon: History }
-]
+])
 
 // Content Data
 const userVideos = ref<VideoVO[]>([])
@@ -332,9 +360,10 @@ const fetchProfile = async () => {
   error.value = ''
   try {
     const res = await userApi.getMyProfile()
-    profile.value = res as any
+    profile.value = res
     // Update tab counts if available
     tabs[0].count = profile.value?.videoCount
+
   } catch (err) {
     console.error('Failed to fetch profile:', err)
     error.value = '获取个人信息失败，请稍后重试'
@@ -430,8 +459,12 @@ const editVideo = async (video: VideoVO) => {
 }
 
 onMounted(() => {
-  fetchProfile()
-  fetchContent()
+  if (isLoggedIn?.value) {
+    fetchProfile()
+    fetchContent()
+  } else {
+    loading.value = false
+  }
 })
 </script>
 

@@ -1,11 +1,13 @@
 <template>
   <div class="settings-container">
-    <div class="settings-header">
-      <h1 class="page-title">{{ t('settings.title') }}</h1>
-      <p class="page-subtitle">{{ t('settings.subtitle') }}</p>
+    <div class="settings-header relative flex items-center justify-center mb-8">
+      <button @click="$router.push('/')" class="absolute left-0 p-2 text-white/80 hover:text-white rounded-full bg-white/5 backdrop-blur-md">
+        <ArrowLeft class="w-6 h-6" />
+      </button>
+      <h1 class="page-title text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 m-0">{{ t('settings.title') }}</h1>
     </div>
 
-    <div class="settings-content">
+    <div class="settings-content pb-20">
       <!-- 基础设置 -->
       <section class="settings-section glass-panel">
         <h2 class="section-title">
@@ -37,29 +39,6 @@
         </div>
       </section>
 
-      <!-- 关于信息 -->
-      <section class="settings-section glass-panel">
-        <h2 class="section-title">
-          <span class="icon">ℹ️</span>
-          {{ t('settings.about.title') }}
-        </h2>
-        
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="label">{{ t('settings.about.version') }}</span>
-            <span class="description">v1.0.0 (Beta)</span>
-          </div>
-          <el-button link type="primary">{{ t('settings.about.checkUpdate') }}</el-button>
-        </div>
-        
-        <div class="setting-item">
-          <div class="setting-info">
-            <span class="label">{{ t('settings.about.browserInfo') }}</span>
-            <span class="description">{{ browserInfo }}</span>
-          </div>
-        </div>
-      </section>
-
       <!-- 账号安全 (需要登录) -->
       <section class="settings-section glass-panel" :class="{ 'locked': !isLoggedIn }">
         <h2 class="section-title">
@@ -70,7 +49,7 @@
 
         <div v-if="!isLoggedIn" class="login-placeholder">
           <p>{{ t('settings.security.loginPlaceholder') }}</p>
-          <el-button type="primary" round @click="$emit('require-login')">{{ t('settings.security.loginBtn') }}</el-button>
+          <el-button type="primary" round @click="$router.push('/login')">{{ t('settings.security.loginBtn') }}</el-button>
         </div>
 
         <div v-else class="secure-settings">
@@ -107,6 +86,61 @@
           </div>
         </div>
       </section>
+
+      <!-- 账号操作 (退出/切换) -->
+      <section v-if="isLoggedIn" class="settings-section glass-panel">
+         <h2 class="section-title">
+            <span class="icon">👤</span>
+            账号操作
+         </h2>
+         
+         <div class="flex flex-col gap-3">
+             <button @click="handleSwitchAccount" class="flex items-center justify-between w-full p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-left group">
+                 <div class="flex items-center gap-3">
+                     <div class="p-2 rounded-full bg-indigo-500/20 text-indigo-400 group-hover:text-indigo-300">
+                         <Users class="w-5 h-5" />
+                     </div>
+                     <div class="flex flex-col">
+                         <span class="font-medium text-white">切换账号</span>
+                         <span class="text-xs text-gray-500">登录另一个账号</span>
+                     </div>
+                 </div>
+                 <ChevronRight class="w-5 h-5 text-gray-500" />
+             </button>
+
+             <button @click="handleLogout" class="flex items-center justify-between w-full p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-colors text-left group">
+                 <div class="flex items-center gap-3">
+                     <div class="p-2 rounded-full bg-red-500/20 text-red-500 group-hover:text-red-400">
+                         <LogOut class="w-5 h-5" />
+                     </div>
+                     <span class="font-medium text-red-500 group-hover:text-red-400">退出登录</span>
+                 </div>
+             </button>
+         </div>
+      </section>
+
+      <!-- 关于信息 -->
+      <section class="settings-section glass-panel">
+        <h2 class="section-title">
+          <span class="icon">ℹ️</span>
+          {{ t('settings.about.title') }}
+        </h2>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="label">{{ t('settings.about.version') }}</span>
+            <span class="description">v1.0.0 (Beta)</span>
+          </div>
+          <el-button link type="primary">{{ t('settings.about.checkUpdate') }}</el-button>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <span class="label">{{ t('settings.about.browserInfo') }}</span>
+            <span class="description">{{ browserInfo }}</span>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -114,6 +148,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { ArrowLeft, LogOut, Users, ChevronRight } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   isLoggedIn: boolean
@@ -126,6 +162,7 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
+const router = useRouter()
 
 const isDarkMode = computed({
   get: () => props.theme === 'dark',
@@ -146,6 +183,20 @@ const browserInfo = computed(() => {
 function toggleTheme() {
   // Logic handled by computed setter
 }
+
+const handleLogout = () => {
+  if (confirm('确定要退出登录吗？')) {
+      localStorage.removeItem('token')
+      // Force reload to clear state effectively or use a global store
+      window.location.href = '/'
+  }
+}
+
+const handleSwitchAccount = () => {
+  // Clear token and go to login page
+  localStorage.removeItem('token')
+  router.push('/login')
+}
 </script>
 
 <style lang="scss" scoped>
@@ -154,6 +205,27 @@ function toggleTheme() {
   margin: 0 auto;
   padding: 40px 20px;
   animation: fadeIn 0.5s ease;
+  color: #fff;
+}
+
+/* CSS Variables Fallback/Definition for this component scope if global ones are missing */
+:root {
+    --surface: rgba(255, 255, 255, 0.05); /* Dark mode default */
+    --border: rgba(255, 255, 255, 0.1);
+    --text: #ffffff;
+    --muted: rgba(255, 255, 255, 0.6);
+    --border-hover: rgba(255, 255, 255, 0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --bg: #000;
+}
+
+:root[data-theme='light'] {
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --muted: #6b7280;
+    --border-hover: #d1d5db;
+    --bg: #f3f4f6;
 }
 
 .settings-header {
@@ -282,7 +354,9 @@ function toggleTheme() {
 /* 移动端适配 */
 @media (max-width: 768px) {
   .settings-container {
-    padding: 20px 16px;
+    padding: 60px 16px 100px 16px; /* Increased top padding */
+    min-height: 100%;
+    overflow-y: auto;
   }
   
   .page-title {

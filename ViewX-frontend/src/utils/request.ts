@@ -46,11 +46,36 @@ class Request {
                     window.dispatchEvent(new Event('unauthorized'))
                     return Promise.reject(new Error(message || 'Token expired'))
                 } else {
+                    // 检查是否配置了跳过错误处理 (针对 HTTP 200 但业务 code 报错的情况)
+                    const config = response.config as any;
+                    const headers = config?.headers as any;
+                    // 检查 headers (兼容 AxiosHeaders 实例)
+                    const hasSkipHeader = headers?.['X-Skip-Error-Handler'] ||
+                        headers?.['x-skip-error-handler'] ||
+                        (typeof headers?.get === 'function' && (headers.get('X-Skip-Error-Handler') || headers.get('x-skip-error-handler')));
+
+                    if (config?.skipErrorHandler || hasSkipHeader || config?.params?.['_skip_error']) {
+                        return Promise.reject(new Error(message || 'Error'))
+                    }
+
                     ElMessage.error(message || '系统错误')
                     return Promise.reject(new Error(message || 'Error'))
                 }
             },
             (error: any) => {
+                // 如果配置了跳过错误处理（支持通过 config, headers 或 params 传递）
+                // 增加 headers 对象方法的检查(针对 AxiosHeaders 实例)
+                const headers = error.config?.headers as any;
+                const hasSkipHeader = headers?.['X-Skip-Error-Handler'] ||
+                    headers?.['x-skip-error-handler'] ||
+                    (typeof headers?.get === 'function' && (headers.get('X-Skip-Error-Handler') || headers.get('x-skip-error-handler')));
+
+                if ((error.config as any)?.skipErrorHandler ||
+                    hasSkipHeader ||
+                    error.config?.params?.['_skip_error']) {
+                    return Promise.reject(error)
+                }
+
                 // 处理 HTTP 状态码错误
                 let message = ''
                 const status = error.response?.status
@@ -64,6 +89,8 @@ class Request {
                         message = '拒绝访问'
                         break
                     case 404:
+                        // 虽然 404 通常表示资源不存在，但有时也是业务逻辑的一部分（如检查用户是否存在）
+                        // 如果没有 skipErrorHandler，才报错
                         message = '请求地址出错'
                         break
                     case 500:

@@ -5,10 +5,12 @@ import App from './App.vue'
 import './styles/tailwind.css'
 import './styles/theme.scss'
 import i18n from './i18n'
+import router from './router'
 
 const app = createApp(App)
 
 // 配置Element Plus
+app.use(router)
 app.use(ElementPlus)
 app.use(i18n)
 

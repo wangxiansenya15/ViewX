@@ -1,91 +1,99 @@
 <template>
-  <header class="glass-panel h-16 flex items-center justify-between px-6 z-40 fixed top-0 w-full border-b-0">
-    <!-- Logo -->
-    <div class="flex items-center gap-3 group cursor-pointer" @click="$emit('navigate', 'home')">
-      <div
-        class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg group-hover:rotate-12 spring-transition">
-        <Play class="w-4 h-4 text-white fill-white" />
+  <header class="glass-panel h-14 md:h-16 flex items-center justify-between px-3 md:px-6 z-40 fixed top-0 w-full border-b-0 transition-all duration-300">
+    
+    <!-- Left Section: Menu & Logo -->
+    <div class="flex items-center gap-2 md:gap-3">
+      <!-- Mobile Menu Button -->
+      <button class="md:hidden p-1 text-[var(--muted)] hover:text-[var(--text)] active:scale-90 transition-transform" 
+        @click="$emit('toggle-sidebar')">
+        <Menu class="w-6 h-6" />
+      </button>
+
+      <!-- Logo -->
+      <div class="flex items-center gap-2 md:gap-3 group cursor-pointer select-none" @click="$emit('navigate', 'home')">
+        <div
+          class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg group-hover:rotate-12 spring-transition">
+          <Play class="w-3.5 h-3.5 md:w-4 md:h-4 text-white fill-white" />
+        </div>
+        <span
+          :class="['text-lg md:text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r', theme === 'light' ? 'from-indigo-600 to-purple-600' : 'from-white to-gray-400']">ViewX</span>
       </div>
-      <span
-        :class="['text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r', theme === 'light' ? 'from-indigo-600 to-purple-600' : 'from-white to-gray-400']">ViewX</span>
     </div>
 
-    <!-- 搜索栏 -->
-    <div class="hidden md:flex flex-1 max-w-xl mx-8 relative">
+    <!-- Center Section: Search Bar (Desktop Only) -->
+    <div class="hidden md:flex flex-1 max-w-xl mx-8 relative group">
       <input type="text" placeholder="搜索视频、UP主..."
-        class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-[var(--primary)] transition-all placeholder-[var(--muted)] text-[var(--text)]">
-      <Search class="absolute left-3.5 top-2.5 w-4 h-4 text-[var(--muted)]" />
+        class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[var(--primary)] transition-all placeholder-[var(--muted)] text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 shadow-sm">
+      <Search class="absolute left-3.5 top-2.5 w-4 h-4 text-[var(--muted)] group-focus-within:text-[var(--primary)] transition-colors" />
     </div>
 
-    <!-- 用户区 -->
-    <div class="flex items-center gap-5">
-      <!-- Upload Button -->
+    <!-- Right Section: User Actions -->
+    <div class="flex items-center gap-2 md:gap-4">
+      <!-- Mobile Search Button -->
+      <button class="md:hidden p-2 text-[var(--muted)] hover:text-[var(--text)] active:scale-95 transition-transform">
+        <Search class="w-5 h-5" />
+      </button>
+
+      <!-- Upload Button (Desktop) -->
       <button 
         v-if="isLoggedIn"
         @click="$emit('navigate', 'upload')"
-        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-[var(--text)] transition-all border border-transparent hover:border-indigo-500/30 group"
+        class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-[var(--text)] transition-all border border-transparent hover:border-indigo-500/30 group active:scale-95"
       >
         <Upload class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
         <span class="text-sm font-medium">投稿</span>
       </button>
 
-      <button class="relative hover:text-[var(--text)] text-[var(--muted)] transition-colors click-spring">
+      <!-- Notification Bell -->
+      <button class="relative p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors active:scale-90 click-spring">
         <Bell class="w-5 h-5" />
-        <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-[var(--bg)]"></span>
+        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-[var(--bg)] shadow-sm"></span>
       </button>
       
-      <div v-if="isLoggedIn" class="flex items-center gap-3">
-       <!-- User Profile Dropdown -->
-      <el-dropdown trigger="click" @command="handleCommand">
-        <div class="flex items-center gap-2 cursor-pointer outline-none">
-          <button class="w-10 h-10 rounded-full overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            <img 
-              :src="userProfile?.avatarUrl || defaultAvatar" 
-              alt="User" 
-              class="w-full h-full object-cover"
-            />
-          </button>
-          <div class="hidden md:flex flex-col items-start ml-1">
-            <span class="text-sm font-medium text-[var(--text)] leading-tight">
-              {{ userProfile?.nickname || userProfile?.username || 'User' }}
-            </span>
-            <span v-if="userProfile?.nickname && userProfile?.username" class="text-xs text-[var(--muted)] leading-tight">
-              @{{ userProfile?.username }}
-            </span>
+      <!-- User Profile -->
+      <div v-if="isLoggedIn" class="flex items-center">
+        <el-dropdown trigger="click" @command="handleCommand" popper-class="custom-dropdown">
+          <div class="flex items-center gap-2 cursor-pointer outline-none">
+            <button class="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-transparent hover:border-indigo-500 transition-all duration-300 ring-2 ring-transparent focus:ring-indigo-500/50">
+              <img 
+                :src="userProfile?.avatarUrl || defaultAvatar" 
+                alt="User" 
+                class="w-full h-full object-cover"
+              />
+            </button>
+            <!-- Hide Name on Tablet/Mobile to save space -->
+            <div class="hidden lg:flex flex-col items-start ml-0.5">
+              <span class="text-xs md:text-sm font-bold text-[var(--text)] leading-tight max-w-[100px] truncate">
+                {{ userProfile?.nickname || userProfile?.username || 'User' }}
+              </span>
+            </div>
           </div>
-        </div>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item command="profile">
-              <el-icon><User /></el-icon>个人中心
-            </el-dropdown-item>
-            
-            <!-- Admin Panel Link -->
-            <el-dropdown-item 
-              v-if="isAdminOrModerator" 
-              command="admin"
-              divided
-            >
-              <el-icon><Management /></el-icon>管理后台
-            </el-dropdown-item>
-
-            <el-dropdown-item command="settings">
-              <el-icon><Setting /></el-icon>设置
-            </el-dropdown-item>
-            <el-dropdown-item divided command="logout">
-              <el-icon><SwitchButton /></el-icon>退出登录
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+          <template #dropdown>
+            <el-dropdown-menu class="glass-dropdown">
+              <el-dropdown-item command="profile">
+                <el-icon><User /></el-icon>个人中心
+              </el-dropdown-item>
+              <el-dropdown-item 
+                v-if="isAdminOrModerator" 
+                command="admin"
+                divided
+              >
+                <el-icon><Management /></el-icon>管理后台
+              </el-dropdown-item>
+              <el-dropdown-item command="settings">
+                <el-icon><Setting /></el-icon>设置
+              </el-dropdown-item>
+              <el-dropdown-item divided command="logout">
+                <el-icon><SwitchButton /></el-icon>退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
-      <button v-else @click="$emit('open-login')" class="text-sm font-bold text-white bg-indigo-600 px-4 py-1.5 rounded-full hover:bg-indigo-500 transition-colors">
+      
+      <!-- Login Button -->
+      <button v-else @click="$emit('open-login')" class="text-xs md:text-sm font-bold text-white bg-indigo-600 px-3 md:px-4 py-1.5 md:py-2 rounded-full hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/30 transition-all active:scale-95">
         登录
-      </button>
-
-      <!-- Mobile Menu Button -->
-      <button class="md:hidden text-[var(--muted)] hover:text-[var(--text)]" @click="$emit('toggle-sidebar')">
-        <Menu class="w-6 h-6" />
       </button>
     </div>
   </header>

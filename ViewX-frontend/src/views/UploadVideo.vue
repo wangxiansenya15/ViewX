@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#0f0f0f] pt-24 pb-10 px-4 sm:px-6 lg:px-8">
+  <div class="h-full w-full overflow-y-auto bg-[#0f0f0f] pt-10 pb-20 px-4 sm:px-6 lg:px-8">
     <div class="max-w-4xl mx-auto">
       
       <div class="glass-panel rounded-3xl p-8 relative overflow-hidden">
@@ -240,16 +240,8 @@ const handlePublish = async () => {
 
   isPublishing.value = true
   try {
-    // 1. Upload Cover (if exists)
-    if (coverFile.value) {
-      const coverUrl = await videoApi.uploadCoverImage(coverFile.value)
-      form.value.coverUrl = coverUrl
-      // Also set thumbnail for compatibility if needed, though backend handles it
-      form.value.thumbnailUrl = coverUrl
-    }
-
-    // 2. Upload Video & Metadata
-    await videoApi.uploadVideo(videoFile.value, form.value)
+    // 一次性上传视频和封面
+    await videoApi.uploadVideo(videoFile.value, coverFile.value, form.value)
     
     ElMessage.success(t('upload.success'))
     emit('publish-success')

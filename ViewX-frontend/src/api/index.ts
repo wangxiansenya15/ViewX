@@ -40,6 +40,8 @@ export interface VideoVO {
     uploaderId: number
     uploaderNickname: string
     uploaderAvatar: string
+    videoUrl?: string // Added for feed playback
+    tags?: string[] // Added for feed tags
 }
 
 // 视频详情 VO
@@ -114,6 +116,67 @@ export interface UserProfileVO {
     likeCount: number
 }
 
+// 内容上传 DTO
+export interface ContentCreateDTO {
+    title: string
+    description?: string
+    category?: string
+    subcategory?: string
+    tags?: string[]
+    visibility?: 'PUBLIC' | 'PRIVATE' | 'UNLISTED'
+}
+
+// 内容详情 VO
+export interface ContentDetailVO {
+    id: number
+    contentType: 'VIDEO' | 'IMAGE' | 'IMAGE_SET'
+    title: string
+    description?: string
+    primaryUrl: string
+    coverUrl?: string
+    thumbnailUrl: string
+    mediaUrls?: string[]  // 图片集使用
+    duration?: number      // 视频使用
+    category?: string
+    subcategory?: string
+    tags?: string[]
+    visibility: string
+    status: string
+    uploaderId: number
+    uploaderNickname: string
+    uploaderAvatar: string
+    isUploaderVerified: boolean
+    viewCount: number
+    likeCount: number
+    dislikeCount: number
+    shareCount: number
+    commentCount: number
+    isLiked: boolean
+    isFavorited: boolean
+    isFollowingUploader: boolean
+    createdAt: string
+    publishedAt: string
+}
+
+// 内容列表 VO
+export interface ContentVO {
+    id: number
+    contentType: 'VIDEO' | 'IMAGE' | 'IMAGE_SET'
+    title: string
+    description?: string
+    thumbnailUrl: string
+    coverUrl?: string
+    imageCount?: number    // 图片集的图片数量
+    duration?: number      // 视频时长
+    uploaderId: number
+    uploaderNickname: string
+    uploaderAvatar: string
+    viewCount: number
+    likeCount: number
+    commentCount: number
+    publishedAt: string
+}
+
 // 认证相关 API
 export const authApi = {
     login(data: LoginDTO) {
@@ -162,9 +225,15 @@ export const videoApi = {
     },
 
     // 上传视频及元数据
-    uploadVideo(file: File, data: VideoCreateDTO) {
+    uploadVideo(file: File, coverFile: File | null, data: VideoCreateDTO) {
         const formData = new FormData()
         formData.append('file', file)
+
+        // 如果有封面文件,一起上传
+        if (coverFile) {
+            formData.append('coverFile', coverFile)
+        }
+
         formData.append('title', data.title)
         formData.append('duration', data.duration.toString())
 
@@ -184,11 +253,11 @@ export const videoApi = {
         })
     },
 
-    // 上传封面图片
+    // 上传封面图片(返回封面URL和缩略图URL)
     uploadCoverImage(file: File) {
         const formData = new FormData()
         formData.append('file', file)
-        return request.post<string>('/videos/upload/cover', formData, {
+        return request.post<{ coverUrl: string; thumbnailUrl: string }>('/videos/upload/cover', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -196,12 +265,12 @@ export const videoApi = {
     },
 
     // 更新视频
-    updateVideo(id: string, data: Partial<VideoCreateDTO>) {
+    updateVideo(id: number, data: Partial<VideoCreateDTO>) {
         return request.put<void>(`/videos/${id}`, data)
     },
 
     // 删除视频
-    deleteVideo(id: string) {
+    deleteVideo(id: number) {
         return request.delete<void>(`/videos/${id}`)
     }
 }
@@ -266,3 +335,76 @@ export const adminApi = {
         return request.patch<void>(`/admin/users/${userId}/status`, { status })
     }
 }
+
+// 内容相关 API (图片、图片集)
+export const contentApi = {
+    // 上传单张图片
+    uploadImage(file: File, data: ContentCreateDTO) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('title', data.title)
+
+        if (data.description) formData.append('description', data.description)
+        if (data.category) formData.append('category', data.category)
+        if (data.subcategory) formData.append('subcategory', data.subcategory)
+        if (data.visibility) formData.append('visibility', data.visibility)
+
+        if (data.tags && data.tags.length > 0) {
+            data.tags.forEach(tag => formData.append('tags', tag))
+        }
+
+        return request.post<number>('/contents/image', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        })
+    },
+
+    // 上传图片集 (2-9张图片)
+    uploadImageSet(files: File[], data: ContentCreateDTO) {
+        const formData = new FormData()
+
+        // 添加所有图片文件
+        files.forEach(file => {
+            formData.append('files', file)
+        })
+
+        formData.append('title', data.title)
+
+        if (data.description) formData.append('description', data.description)
+        if (data.category) formData.append('category', data.category)
+        if (data.subcategory) formData.append('subcategory', data.subcategory)
+        if (data.visibility) formData.append('visibility', data.visibility)
+
+        if (data.tags && data.tags.length > 0) {
+            data.tags.forEach(tag => formData.append('tags', tag))
+        }
+
+        return request.post<number>('/contents/image-set', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        })
+    },
+
+    // 获取内容详情
+    getContentDetail(id: number, config?: any) {
+        return request.get<ContentDetailVO>(`/contents/${id}`, config)
+    },
+
+    // 获取用户的内容列表
+    getUserContents(userId: number, contentType?: 'VIDEO' | 'IMAGE' | 'IMAGE_SET') {
+        return request.get<ContentVO[]>(`/contents/user/${userId}`, {
+            params: contentType ? { type: contentType } : {}
+        })
+    },
+
+    // 获取我的内容列表
+    getMyContents(contentType?: 'VIDEO' | 'IMAGE' | 'IMAGE_SET') {
+        return request.get<ContentVO[]>('/contents/my', {
+            params: contentType ? { type: contentType } : {}
+        })
+    },
+
+    // 删除内容
+    deleteContent(id: number) {
+        return request.delete<void>(`/contents/${id}`)
+    }
+}
+

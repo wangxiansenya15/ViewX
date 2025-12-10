@@ -1,86 +1,126 @@
 <template>
-  <div id="app"
-    class="h-screen w-full flex flex-col relative selection:bg-indigo-500 selection:text-white transition-colors duration-300">
-
-    <!-- 顶部进度条 -->
+  <div id="app" class="h-screen w-full flex flex-col relative selection:bg-indigo-500 selection:text-white bg-[#0f0f0f] text-white overflow-hidden">
+    
+    <!-- Global Loading -->
     <div class="loading-bar" :style="{ width: loadPercent + '%', opacity: (isLoading && !isInitialLoad) ? 1 : 0 }"></div>
-
-    <!-- Splash Screen -->
     <SplashScreen :show="isInitialLoad" :progress="loadPercent" />
 
-    <!-- Admin Layout -->
-    <AdminLayout v-if="activeTab === 'admin'" @back-to-home="handleNavigation('home')" />
+    <!-- === MOBILE LAYOUT === -->
+    <div v-if="isMobile" class="h-full w-full relative z-0">
+       <!-- Header (Conditional) -->
+       <MobileHeader 
+         v-if="!route.meta.hideHeader" 
+         :active-tab="mobileTab"
+         @toggle-sidebar="mobileSidebarOpen = true"
+         @change-tab="(t: string) => mobileTab = t"
+       />
 
-    <!-- User Layout -->
-    <template v-else>
-      <!-- 顶部导航栏 -->
-      <NavBar :theme="theme" :is-logged-in="isLoggedIn" @toggle-sidebar="toggleSidebar" @open-login="openLogin"
-        @logout="handleLogout" @navigate="handleNavigation" />
+       <!-- Main Content -->
+       <div class="h-full w-full relative overflow-y-auto no-scrollbar scroll-smooth">
+         <router-view v-slot="{ Component }">
+            <keep-alive>
+               <component :is="Component" />
+            </keep-alive>
+         </router-view>
+       </div>
 
-      <div class="flex flex-1 pt-16 h-full overflow-hidden relative z-10">
+       <!-- Bottom Nav (Conditional) -->
+       <MobileBottomNav v-if="!route.meta.hideNav" />
 
-        <!-- 左侧导航 (Sidebar) -->
-        <Sidebar class="hidden md:flex" @change-tab="handleTabChange" @navigate="handleNavigation" />
+       <!-- Overlays -->
+       <MobileSidebar :is-open="mobileSidebarOpen" @close="mobileSidebarOpen = false" />
+       <MobileCommentSheet :is-open="mobileCommentsOpen" @close="mobileCommentsOpen = false" />
+    </div>
 
-        <!-- 主内容区 -->
-        <main class="flex-1 overflow-y-auto pt-4 md:pt-8 scroll-smooth" ref="mainScroll">
-          <VideoMasonry v-if="activeTab === 'home'" :videos="videos" @open-video="openVideo" />
-          <Profile v-else-if="activeTab === 'profile'" @open-video="openVideo" />
-          <UploadVideo v-else-if="activeTab === 'upload'" @publish-success="handleNavigation('profile')" @navigate="handleNavigation" />
-          <Settings v-else-if="activeTab === 'settings'" :is-logged-in="isLoggedIn" :theme="theme" @toggle-theme="toggleTheme" @require-login="openLogin" />
-        </main>
-      </div>
-    </template>
+    <!-- === DESKTOP LAYOUT === -->
+    <div v-else class="h-full w-full flex flex-col relative z-0">
+       <NavBar 
+         :theme="theme" 
+         :is-logged-in="isLoggedIn" 
+         @toggle-sidebar="desktopSidebarOpen = !desktopSidebarOpen" 
+         @open-login="showLoginModal = true"
+         @logout="handleLogout" 
+       />
 
-    <!-- 沉浸式详情页 (Modal) -->
-    <VideoDetail :video="currentVideo" @close="closeVideo" />
+       <div class="flex flex-1 overflow-hidden relative z-10">
+         <Sidebar class="hidden md:flex" v-show="desktopSidebarOpen" />
+         
+         <main class="flex-1 overflow-y-auto scroll-smooth relative" id="desktop-main">
+            <router-view />
+         </main>
+       </div>
+    </div>
 
-    <!-- Login Modal -->
+    <!-- Shared Modals -->
+    <VideoDetail v-if="currentVideo" :video="currentVideo" @close="currentVideo = null" />
+    
     <transition name="modal">
       <div v-if="showLoginModal" class="fixed inset-0 z-[100]">
-        <Login @login-success="handleLoginSuccess" @close="closeLogin" />
+        <Login @login-success="handleLoginSuccess" @close="showLoginModal = false" />
       </div>
     </transition>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, provide, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { type VideoVO } from '@/api'
+import { useWindowSize } from '@vueuse/core'
+
+// Components
 import NavBar from './components/NavBar.vue'
 import Sidebar from './components/Sidebar.vue'
-import VideoMasonry from './components/VideoMasonry.vue'
 import VideoDetail from './components/VideoDetail.vue'
-import Login from './views/Login.vue'
-import Profile from './views/Profile.vue'
-import UploadVideo from './views/UploadVideo.vue'
-import Settings from './views/Settings.vue'
-import AdminLayout from './views/admin/AdminLayout.vue'
 import SplashScreen from './components/SplashScreen.vue'
-import { authApi, videoApi, type VideoVO } from '@/api'
+import Login from './views/Login.vue'
 
-// 状态管理
+// Mobile Components
+import MobileHeader from './components/mobile/MobileHeader.vue'
+import MobileBottomNav from './components/mobile/MobileBottomNav.vue'
+import MobileSidebar from './components/mobile/MobileSidebar.vue'
+import MobileCommentSheet from './components/mobile/MobileCommentSheet.vue'
+
+const route = useRoute()
+const router = useRouter()
+const { width } = useWindowSize()
+
+// State
+const isMobile = computed(() => width.value < 768)
+const theme = ref<'light' | 'dark'>('dark')
+const isLoggedIn = ref(false)
 const isLoading = ref(false)
 const isInitialLoad = ref(true)
-const loadPercent = ref(0)
-const activeTab = ref('home')
+const loadPercent = ref(0) // Mock loading
+
+// Layout State
+const mobileSidebarOpen = ref(false)
+const mobileCommentsOpen = ref(false)
+const mobileTab = ref('recommend')
+const desktopSidebarOpen = ref(true)
+
+// Modal State
 const currentVideo = ref<VideoVO | null>(null)
 const showLoginModal = ref(false)
-const isLoggedIn = ref(false)
-const theme = ref<'light' | 'dark'>('dark') // Default to dark as per design
-const sidebarOpen = ref(false)
 
-const videos = ref<VideoVO[]>([])
-
-const fetchVideos = async () => {
-  try {
-    const res = await videoApi.getFeed()
-    videos.value = res
-  } catch (e) {
-    console.error('Failed to fetch videos:', e)
+// === ACTIONS PROVIDED TO CHILDREN ===
+const openComments = (_video: VideoVO) => {
+  if (isMobile.value) {
+    mobileCommentsOpen.value = true
   }
 }
 
-// 方法
+const openDesktopVideo = (video: VideoVO) => {
+  currentVideo.value = video
+}
+
+provide('isMobile', isMobile)
+provide('openComments', openComments)
+provide('openDesktopVideo', openDesktopVideo)
+provide('isLoggedIn', isLoggedIn)
+
+// === AUTH & LOAD LOGIC ===
 const triggerLoad = (cb?: () => void) => {
   isLoading.value = true
   loadPercent.value = 0
@@ -92,10 +132,7 @@ const triggerLoad = (cb?: () => void) => {
       loadPercent.value = 100
       setTimeout(() => {
         isLoading.value = false
-        if (isInitialLoad.value) {
-          isInitialLoad.value = false
-        }
-        loadPercent.value = 0
+        if (isInitialLoad.value) isInitialLoad.value = false
         if (cb) cb()
       }, 500)
     } else {
@@ -104,104 +141,15 @@ const triggerLoad = (cb?: () => void) => {
   }, 50)
 }
 
-const handleTabChange = (tabId: string) => {
-  if (activeTab.value !== tabId) {
-    triggerLoad(() => {
-      activeTab.value = tabId
-      if (tabId === 'home') {
-        fetchVideos()
-      }
-    })
-  }
-}
-
-const handleNavigation = (view: 'home' | 'settings' | 'profile' | 'admin' | 'upload') => {
-  if (view === 'profile' && !isLoggedIn.value) {
-    openLogin()
-    return
-  }
-
-  if (view === 'upload' && !isLoggedIn.value) {
-    openLogin()
-    return
-  }
-
-  if (view === 'home') {
-    handleTabChange('home')
-  } else if (view === 'settings') {
-    activeTab.value = 'settings'
-  } else if (view === 'profile') {
-    activeTab.value = 'profile'
-  } else if (view === 'admin') {
-    activeTab.value = 'admin'
-  } else if (view === 'upload') {
-    activeTab.value = 'upload'
-  }
-}
-
-const toggleTheme = () => {
-  theme.value = theme.value === 'light' ? 'dark' : 'light'
-  document.documentElement.setAttribute('data-theme', theme.value)
-}
-
-const openVideo = async (video: VideoVO) => {
-  try {
-    // 调用后端API获取完整的视频详情
-    const detailData = await videoApi.getDetail(video.id)
-    
-    triggerLoad(() => {
-      currentVideo.value = detailData
-    })
-  } catch (error) {
-    console.error('Failed to fetch video detail:', error)
-    // 如果获取失败，降级使用列表数据
-    triggerLoad(() => {
-      currentVideo.value = video
-    })
-  }
-}
-
-const closeVideo = () => {
-  currentVideo.value = null
-}
-
-// Check for token on startup
 const checkAuth = async () => {
-  // 1. Check URL for token (OAuth callback)
-  const urlParams = new URLSearchParams(window.location.search)
-  const urlToken = urlParams.get('token')
-  
-  if (urlToken) {
-    localStorage.setItem('token', urlToken)
-    // Clean URL
-    window.history.replaceState({}, '', window.location.pathname)
-    isLoggedIn.value = true
-  }
-
-  // 2. Validate token
   const token = localStorage.getItem('token')
-  if (token) {
-    try {
-      // Validate token with backend
-      await authApi.validateToken(token)
-      isLoggedIn.value = true
-    } catch (error) {
-      // Token invalid or expired
-      console.warn('Token validation failed:', error)
-      localStorage.removeItem('token')
-      isLoggedIn.value = false
-    }
-  }
+  if (token) isLoggedIn.value = true
 }
 
-checkAuth()
-
-const openLogin = () => {
-  showLoginModal.value = true
-}
-
-const closeLogin = () => {
-  showLoginModal.value = false
+const handleLogout = async () => {
+  localStorage.removeItem('token')
+  isLoggedIn.value = false
+  router.push('/')
 }
 
 const handleLoginSuccess = () => {
@@ -209,47 +157,16 @@ const handleLoginSuccess = () => {
   showLoginModal.value = false
 }
 
-const handleLogout = async () => {
-  try {
-    await authApi.logout()
-  } catch (e) {
-    console.error('Logout failed:', e)
-  } finally {
-    isLoggedIn.value = false
-    localStorage.removeItem('token')
-    if (activeTab.value === 'profile') {
-      handleNavigation('home')
-    }
-  }
-}
-
-const toggleSidebar = () => {
-  sidebarOpen.value = !sidebarOpen.value
-}
-
 onMounted(() => {
-  document.documentElement.setAttribute('data-theme', theme.value)
-  triggerLoad(() => {
-    fetchVideos()
-  })
-  
-  window.addEventListener('unauthorized', () => {
-    isLoggedIn.value = false
-    // Optionally open login modal or just reset state
-    // showLoginModal.value = true 
-  })
+  checkAuth()
+  triggerLoad()
 })
 </script>
 
 <style scoped>
-/* Modal Transition */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
+.modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+.loading-bar { height: 3px; background: #6366f1; position: fixed; top: 0; left: 0; z-index: 9999; transition: width 0.2s, opacity 0.4s; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
