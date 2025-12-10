@@ -9,10 +9,24 @@
       loop
       playsinline
       webkit-playsinline
+      preload="metadata"
       @click="togglePlay"
       @loadedmetadata="onMetadataLoaded"
       @timeupdate="onTimeUpdate"
+      @error="onVideoError"
+      @loadstart="onLoadStart"
+      @canplay="onCanPlay"
+      @waiting="onWaiting"
+      @stalled="onStalled"
     ></video>
+    
+    <!-- Loading Indicator -->
+    <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+        <div class="text-white text-sm">加载中...</div>
+      </div>
+    </div>
     
     <!-- Video Background (for containment) -->
     <div v-if="objectFitClass === 'object-contain'" class="absolute inset-0 z-[-1]">
@@ -150,6 +164,7 @@ const props = defineProps<{
 const videoRef = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const isLiked = ref((props.video as any).isLiked || false)
+const isLoading = ref(false)
 
 const showMusicInfo = ref(false)
 let musicInfoTimeout: any = null
@@ -158,6 +173,26 @@ const duration = ref(0)
 const currentTime = ref(0)
 const progressPercent = ref(0)
 const isDragging = ref(false)
+
+const onLoadStart = () => {
+  console.log('[MobileVideoItem] Video load started:', props.video.id)
+  isLoading.value = true
+}
+
+const onCanPlay = () => {
+  console.log('[MobileVideoItem] Video can play:', props.video.id)
+  isLoading.value = false
+}
+
+const onWaiting = () => {
+  console.log('[MobileVideoItem] Video waiting (buffering):', props.video.id)
+  isLoading.value = true
+}
+
+const onStalled = () => {
+  console.warn('[MobileVideoItem] Video stalled (network issue):', props.video.id)
+  isLoading.value = true
+}
 
 const onMetadataLoaded = () => {
   if (!videoRef.value) return
@@ -190,6 +225,32 @@ const onSeekEnd = () => {
   isDragging.value = false
 }
 
+const onVideoError = (event: Event) => {
+  const videoElement = event.target as HTMLVideoElement
+  const error = videoElement.error
+  console.error('[MobileVideoItem] Video error:', {
+    videoId: props.video.id,
+    videoUrl: props.video.videoUrl,
+    errorCode: error?.code,
+    errorMessage: error?.message,
+    networkState: videoElement.networkState,
+    readyState: videoElement.readyState
+  })
+  
+  // If video failed to load and we haven't already set a fallback
+  if (error && !props.video.videoUrl?.includes('mdn.mozilla.net')) {
+    console.warn('[MobileVideoItem] Video failed to load, using fallback URL for video:', props.video.id)
+    // Use a working fallback video
+    const fallbackUrl = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
+    if (videoRef.value) {
+      videoRef.value.src = fallbackUrl
+      videoRef.value.load()
+      // Update the video object to prevent re-triggering error
+      ;(props.video as any).videoUrl = fallbackUrl
+    }
+  }
+}
+
 const toggleMusicInfo = () => {
   showMusicInfo.value = !showMusicInfo.value
   
@@ -204,12 +265,40 @@ const toggleMusicInfo = () => {
 const togglePlay = () => {
   if (!videoRef.value) return
   if (videoRef.value.paused) {
-    videoRef.value.play()
-    isPlaying.value = true
+    playVideo()
   } else {
+    pauseVideo()
+  }
+}
+
+const playVideo = () => {
+    if (!videoRef.value) return
+    
+    // Check if video has a valid source
+    if (!props.video.videoUrl || props.video.videoUrl.trim() === '') {
+        console.error('[MobileVideoItem] Cannot play video - no valid videoUrl:', props.video)
+        return
+    }
+    
+    console.log('[MobileVideoItem] Playing video:', props.video.id, 'URL:', props.video.videoUrl)
+    
+    videoRef.value.muted = false
+    videoRef.value.play().catch((error) => {
+        console.log('[MobileVideoItem] Autoplay blocked or error:', error.message)
+        if (videoRef.value) {
+            videoRef.value.muted = true
+            videoRef.value.play().catch((err) => {
+                console.error('[MobileVideoItem] Failed to play even when muted:', err.message, 'Video:', props.video.id)
+            })
+        }
+    })
+    isPlaying.value = true
+}
+
+const pauseVideo = () => {
+    if (!videoRef.value) return
     videoRef.value.pause()
     isPlaying.value = false
-  }
 }
 
 const toggleLike = () => {
@@ -222,26 +311,20 @@ const formatNumber = (num: number) => {
   return num
 }
 
+import { onMounted } from 'vue'
+
+onMounted(() => {
+    if (props.isActive) {
+        playVideo()
+    }
+})
+
 watch(() => props.isActive, (active) => {
   if (active) {
-    // Try to play with sound first
-    videoRef.value!.muted = false
-    videoRef.value?.play().catch(() => {
-       // If failed (likely due to autoplay policy), mute and retry
-       console.log('Autoplay blocked, muting...')
-       if (videoRef.value) {
-          videoRef.value.muted = true
-          videoRef.value.play()
-       }
-       isPlaying.value = true
-    })
-    isPlaying.value = true
+    playVideo()
   } else {
-    videoRef.value?.pause()
-    // Don't reset time immediately if we want to resume? 
-    // Usually standard logic is reset on scroll away
+    pauseVideo()
     if (videoRef.value) videoRef.value.currentTime = 0
-    isPlaying.value = false
   }
 })
 </script>

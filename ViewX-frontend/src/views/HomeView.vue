@@ -2,7 +2,7 @@
   <div class="h-full w-full">
     <!-- Mobile Feed -->
     <div v-if="isMobile" class="absolute inset-0 z-0 bg-black">
-      <MobileFeed :videos="feedVideos" @open-comments="openComments" />
+      <MobileFeed :videos="feedVideos" @open-comments="openComments" @load-more="handleLoadMore" />
     </div>
 
     <!-- Desktop Masonry -->
@@ -24,11 +24,22 @@ const openCommentsAction = inject<(v: VideoVO) => void>('openComments')
 const openDesktopVideoAction = inject<(v: VideoVO) => void>('openDesktopVideo')
 
 const feedVideos = ref<VideoVO[]>([])
+const page = ref(1)
+const loading = ref(false)
+const hasMore = ref(true)
 
 
-const fetchVideos = async () => {
+const fetchVideos = async (isLoadMore = false) => {
+  if (loading.value || (!hasMore.value && isLoadMore)) {
+    console.log('[HomeView] Fetch blocked - loading:', loading.value, 'hasMore:', hasMore.value, 'isLoadMore:', isLoadMore)
+    return
+  }
+  
+  console.log('[HomeView] Fetching videos - page:', page.value, 'isLoadMore:', isLoadMore)
+  loading.value = true
   try {
-     const res = await videoApi.getFeed()
+     const res = await videoApi.getFeed(page.value)
+     console.log('[HomeView] API response:', res?.length, 'videos')
      if (res && res.length > 0) {
        // Fetch full details for each video to get the videoUrl
        const detailPromises = res.map(video => 
@@ -53,39 +64,77 @@ const fetchVideos = async () => {
        
        const videosWithDetails = await Promise.all(detailPromises)
        
+       console.log('[HomeView] Videos with details:', videosWithDetails.map(v => ({ 
+         id: v.id, 
+         title: v.title, 
+         videoUrl: v.videoUrl 
+       })))
+       
        // Filter valid ones or apply polyfill if really needed (for dev smoothness)
-       feedVideos.value = videosWithDetails.map((v, i) => ({
+       const newVideos = videosWithDetails.map((v) => ({
          ...v,
          // Keep polyfill as absolute fallback for dev environment if backend URL is empty/broken
-         videoUrl: v.videoUrl || (i % 2 === 0 
-           ? 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4' 
-           : 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4')
+         videoUrl: v.videoUrl || 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4'
        }))
        
+       console.log('[HomeView] Final videos after polyfill:', newVideos.map(v => ({ 
+         id: v.id, 
+         title: v.title, 
+         videoUrl: v.videoUrl 
+       })))
+
+       if (isLoadMore) {
+         console.log('[HomeView] Appending', newVideos.length, 'videos. Total now:', feedVideos.value.length + newVideos.length)
+         feedVideos.value.push(...newVideos)
+       } else {
+         console.log('[HomeView] Setting initial videos:', newVideos.length)
+         feedVideos.value = newVideos
+       }
+       
+       if (res.length < 10) {
+         console.log('[HomeView] No more videos - received', res.length, '< 10')
+         hasMore.value = false
+       }
      } else {
-       throw new Error('No data')
+       hasMore.value = false
+       if (!isLoadMore && feedVideos.value.length === 0) {
+          throw new Error('No data')
+       }
      }
   } catch (e) {
      console.error('Fetch failed, using mock data:', e)
-     // Fallback Mock Data
-     feedVideos.value = [
-       {
-         id: 101,
-         title: 'Amazing Nature',
-         description: 'Beautiful landscapes from around the world.',
-         videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
-         thumbnailUrl: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
-         uploaderNickname: 'NatureLover',
-         uploaderAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nature',
-         likeCount: 1200,
-         commentCount: 45,
-         tags: ['Nature', 'Travel'],
-         duration: 60,
-         viewCount: 5000,
-         publishedAt: new Date().toISOString(),
-         uploaderId: 1
-       }
-     ]
+     // Fallback Mock Data only on first load failure
+     if (!isLoadMore && feedVideos.value.length === 0) {
+        feedVideos.value = [
+          {
+            id: 101,
+            title: 'Amazing Nature',
+            description: 'Beautiful landscapes from around the world.',
+            videoUrl: 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+            thumbnailUrl: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60',
+            uploaderNickname: 'NatureLover',
+            uploaderAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nature',
+            likeCount: 1200,
+            commentCount: 45,
+            tags: ['Nature', 'Travel'],
+            duration: 60,
+            viewCount: 5000,
+            publishedAt: new Date().toISOString(),
+            uploaderId: 1
+          }
+        ]
+     }
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleLoadMore = () => {
+  console.log('[HomeView] handleLoadMore called - loading:', loading.value, 'hasMore:', hasMore.value, 'currentPage:', page.value)
+  if (!loading.value && hasMore.value) {
+    page.value++
+    console.log('[HomeView] Loading page:', page.value)
+    fetchVideos(true)
   }
 }
 
