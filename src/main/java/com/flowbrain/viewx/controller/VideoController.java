@@ -47,10 +47,12 @@ public class VideoController {
     /**
      * Upload video with metadata
      * 上传视频（包含文件和元数据）
+     * 支持同时上传封面图片
      */
     @PostMapping
     public Result<Long> uploadVideo(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "coverFile", required = false) MultipartFile coverFile,
             @RequestParam("title") String title,
             @RequestParam("duration") Integer duration,
             @RequestParam(value = "description", required = false) String description,
@@ -77,7 +79,7 @@ public class VideoController {
         dto.setTags(tags);
         dto.setVisibility(visibility);
 
-        return videoService.uploadVideo(userId, file, dto);
+        return videoService.uploadVideo(userId, file, coverFile, dto);
     }
 
     /**
@@ -94,9 +96,10 @@ public class VideoController {
 
     /**
      * Upload cover image
+     * 单独上传封面图片（返回封面URL和缩略图URL）
      */
     @PostMapping("/upload/cover")
-    public Result<String> uploadCover(@RequestParam("file") MultipartFile file) {
+    public Result<com.flowbrain.viewx.pojo.vo.CoverUploadVO> uploadCover(@RequestParam("file") MultipartFile file) {
         Long userId = getCurrentUserId();
         if (userId == null) {
             return Result.error(401, "请先登录");

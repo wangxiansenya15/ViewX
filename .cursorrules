@@ -1,0 +1,36 @@
+{
+  "rules": [
+    {
+      "name": "ViewX 后端核心架构",
+      "description": "定义了 ViewX 后端使用的语言、框架和分层规范。",
+      "match": "**/src/main/java/com/flowbrain/viewx/**",
+      "context": [
+        "使用 Java 17+ 和 Spring Boot 3.",
+        "严格遵循 Controller/Service/DAO 分层，Service 层是业务核心。",
+        "使用 DTO 作为入参，VO 作为出参，Entity 对应数据库。"
+      ]
+    },
+    {
+      "name": "ViewX 高性能组件与 AI",
+      "description": "定义了缓存、消息队列和 AI 集成的具体技术栈。",
+      "context": [
+        "使用 Redis 进行高性能计数和缓存。",
+        "使用 RabbitMQ 进行异步任务解耦（如通知和行为日志）。",
+        "AI 语义搜索依赖 PostgreSQL 的 pgvector 扩展。"
+      ]
+    },
+    {
+      "name": "排除非代码文件",
+      "exclude": [
+        "target/"
+      ]
+    },
+    {
+      "name": "回复语言偏好 (Response Language Preference)",
+      "description": "提醒 AI 在所有代码生成、解释和交流中都使用中文。",
+      "context": [
+        "**重要提示：所有对我的问题的回答、代码解释、文档生成和建议，都必须使用流利的中文（简体）进行回复。**"
+      ]
+    }
+  ]
+}

@@ -1,12 +1,13 @@
 package com.flowbrain.viewx.dao;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.flowbrain.viewx.pojo.entity.VideoComment;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
 
 @Mapper
-public interface CommentMapper {
+public interface CommentMapper extends BaseMapper<VideoComment> {
 
     @Insert("INSERT INTO vx_video_comments (id, video_id, user_id, parent_id, content) " +
             "VALUES (#{id}, #{videoId}, #{userId}, #{parentId}, #{content})")

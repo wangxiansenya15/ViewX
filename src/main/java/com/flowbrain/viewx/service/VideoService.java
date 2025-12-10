@@ -23,10 +23,11 @@ public interface VideoService {
      * 
      * @param userId    Uploader ID
      * @param videoFile Video file
+     * @param coverFile Cover image file (optional)
      * @param dto       Video metadata (title, description, etc.)
      * @return Created video ID
      */
-    Result<Long> uploadVideo(Long userId, MultipartFile videoFile, VideoUploadDTO dto);
+    Result<Long> uploadVideo(Long userId, MultipartFile videoFile, MultipartFile coverFile, VideoUploadDTO dto);
 
     /**
      * Update an existing video
@@ -39,12 +40,13 @@ public interface VideoService {
     Result<String> updateVideo(Long userId, Long videoId, VideoUpdateDTO videoUpdateDTO);
 
     /**
-     * Upload a cover image
+     * Upload a cover image and generate thumbnail
+     * 上传封面图片并生成缩略图
      * 
      * @param file Image file
-     * @return File URL
+     * @return Cover and thumbnail URLs
      */
-    Result<String> uploadCoverImage(MultipartFile file);
+    Result<com.flowbrain.viewx.pojo.vo.CoverUploadVO> uploadCoverImage(MultipartFile file);
 
     /**
      * Delete video

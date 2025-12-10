@@ -11,8 +11,8 @@ spring:
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/viewx_db?TimeZone=Asia/Shanghai
-    username: postgres
-    password: wjb202218
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
       initial-size: 5
@@ -45,8 +45,8 @@ spring:
   mail:
     host: smtp.qq.com
     port: 587
-    username: ${MAIL_USERNAME:your_email@qq.com}
-    password: ${MAIL_PASSWORD:your_mail_auth_code}  # QQ邮箱授权码
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}  # QQ邮箱授权码
     properties:
       mail:
         smtp:
@@ -59,10 +59,10 @@ spring:
 
   # RabbitMQ 配置 - 开发环境
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
 
   # OAuth2 配置 - 开发环境
   security:

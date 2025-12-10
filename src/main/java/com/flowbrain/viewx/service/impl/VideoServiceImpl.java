@@ -73,7 +73,11 @@ public class VideoServiceImpl implements VideoService {
         // 填充上传者信息
         User uploader = userMapper.selectById(video.getUploaderId());
         if (uploader != null) {
-            vo.setUploaderNickname(uploader.getNickname());
+            if (uploader.getNickname() != null && !uploader.getNickname().isEmpty()) {
+                vo.setUploaderNickname(uploader.getNickname());
+            } else {
+                vo.setUploaderNickname(uploader.getUsername());
+            }
 
             // 获取 UserDetail (avatar)
             com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.flowbrain.viewx.pojo.entity.UserDetail> query = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
@@ -106,7 +110,7 @@ public class VideoServiceImpl implements VideoService {
 
     @Override
     @Transactional
-    public Result<Long> uploadVideo(Long userId, MultipartFile videoFile, VideoUploadDTO dto) {
+    public Result<Long> uploadVideo(Long userId, MultipartFile videoFile, MultipartFile coverFile, VideoUploadDTO dto) {
         try {
             // 1. 上传视频文件到 /videos 目录
             String originalFilename = videoFile.getOriginalFilename();
@@ -119,7 +123,53 @@ public class VideoServiceImpl implements VideoService {
             String storedFilename = storageStrategy.storeFile(videoFile, videoFilename);
             String videoUrl = storageStrategy.getFileUrl(storedFilename);
 
-            // 2. 创建视频记录
+            // 2. 处理封面图片上传 (如果提供了封面文件)
+            String coverUrl = null;
+            String thumbnailUrl = null;
+            
+            if (coverFile != null && !coverFile.isEmpty()) {
+                try {
+                    // 上传封面图片
+                    String coverOriginalFilename = coverFile.getOriginalFilename();
+                    String coverExtension = coverOriginalFilename != null && coverOriginalFilename.contains(".")
+                            ? coverOriginalFilename.substring(coverOriginalFilename.lastIndexOf("."))
+                            : ".jpg";
+
+                    String coverFilename = "cover_" + userId + "_" + System.currentTimeMillis() + coverExtension;
+                    String coverPath = "videos/covers/" + coverFilename;
+                    String storedCoverFilename = storageStrategy.storeFile(coverFile, coverPath);
+                    coverUrl = storageStrategy.getFileUrl(storedCoverFilename);
+
+                    // 生成缩略图
+                    try {
+                        byte[] thumbnailBytes = videoProcessingService.generateThumbnailFromCover(coverFile);
+                        String thumbnailFilename = "videos/thumbnails/thumb_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+                        String storedThumbnailFilename = storageStrategy.storeFile(
+                                new java.io.ByteArrayInputStream(thumbnailBytes),
+                                thumbnailFilename);
+                        thumbnailUrl = storageStrategy.getFileUrl(storedThumbnailFilename);
+                        log.info("成功生成缩略图: {}", thumbnailUrl);
+                    } catch (Exception e) {
+                        log.warn("缩略图生成失败，使用封面图作为缩略图: {}", e.getMessage());
+                        thumbnailUrl = coverUrl; // 降级处理
+                    }
+                    
+                    log.info("封面上传成功: coverUrl={}, thumbnailUrl={}", coverUrl, thumbnailUrl);
+                } catch (Exception e) {
+                    log.error("封面上传失败，继续处理视频上传", e);
+                    // 封面上传失败不影响视频上传
+                }
+            } else if (dto.getCoverUrl() != null && !dto.getCoverUrl().isEmpty()) {
+                // 如果没有上传封面文件，但DTO中有coverUrl（兼容旧逻辑）
+                if (!dto.getCoverUrl().startsWith("http")) {
+                    coverUrl = storageStrategy.getFileUrl(dto.getCoverUrl());
+                } else {
+                    coverUrl = dto.getCoverUrl();
+                }
+                thumbnailUrl = dto.getThumbnailUrl();
+            }
+
+            // 3. 创建视频记录
             Video video = new Video();
             BeanUtils.copyProperties(dto, video);
 
@@ -130,19 +180,13 @@ public class VideoServiceImpl implements VideoService {
             video.setPublishedAt(LocalDateTime.now()); // 默认立即发布
             video.setStatus("APPROVED"); // 默认审核通过，实际应为 PENDING
 
-            // 处理 coverUrl：如果不是完整 URL，则拼接
-            if (dto.getCoverUrl() != null && !dto.getCoverUrl().isEmpty()) {
-                if (!dto.getCoverUrl().startsWith("http")) {
-                    String fullCoverUrl = storageStrategy.getFileUrl(dto.getCoverUrl());
-                    video.setCoverUrl(fullCoverUrl);
-                    log.info("封面URL拼接: {} -> {}", dto.getCoverUrl(), fullCoverUrl);
-                } else {
-                    video.setCoverUrl(dto.getCoverUrl());
-                }
+            // 设置封面和缩略图
+            if (coverUrl != null) {
+                video.setCoverUrl(coverUrl);
             }
-
-            // 调试日志
-            log.info("DTO coverUrl: {}, Video coverUrl: {}", dto.getCoverUrl(), video.getCoverUrl());
+            if (thumbnailUrl != null) {
+                video.setThumbnailUrl(thumbnailUrl);
+            }
 
             // 处理标签数组转List
             if (dto.getTags() != null) {
@@ -150,10 +194,10 @@ public class VideoServiceImpl implements VideoService {
             }
 
             videoMapper.insert(video);
-            log.info("用户 {} 上传视频成功，ID: {}, URL: {}, CoverURL: {}", userId, video.getId(), videoUrl,
-                    video.getCoverUrl());
+            log.info("用户 {} 上传视频成功，ID: {}, VideoURL: {}, CoverURL: {}, ThumbnailURL: {}", 
+                    userId, video.getId(), videoUrl, coverUrl, thumbnailUrl);
 
-            // 3. 提取并关联话题
+            // 4. 提取并关联话题
             Set<String> topics = new HashSet<>();
 
             // 从标题中提取话题
@@ -232,7 +276,7 @@ public class VideoServiceImpl implements VideoService {
     }
 
     @Override
-    public Result<String> uploadCoverImage(MultipartFile file) {
+    public Result<com.flowbrain.viewx.pojo.vo.CoverUploadVO> uploadCoverImage(MultipartFile file) {
         try {
             String originalFilename = file.getOriginalFilename();
             String extension = originalFilename != null && originalFilename.contains(".")
@@ -246,7 +290,7 @@ public class VideoServiceImpl implements VideoService {
             String coverUrl = storageStrategy.getFileUrl(storedFilename);
 
             // 2. 生成并上传缩略图（320x180）
-            // 2. 生成并上传缩略图（320x180）
+            String thumbnailUrl = coverUrl; // 默认使用封面图
             try {
                 byte[] thumbnailBytes = videoProcessingService.generateThumbnailFromCover(file);
                 String thumbnailFilename = "videos/thumbnails/thumb_" + System.currentTimeMillis() + ".jpg";
@@ -254,7 +298,7 @@ public class VideoServiceImpl implements VideoService {
                 String storedThumbnailFilename = storageStrategy.storeFile(
                         new java.io.ByteArrayInputStream(thumbnailBytes),
                         thumbnailFilename);
-                String thumbnailUrl = storageStrategy.getFileUrl(storedThumbnailFilename);
+                thumbnailUrl = storageStrategy.getFileUrl(storedThumbnailFilename);
 
                 log.info("成功生成缩略图: {}", thumbnailUrl);
             } catch (Exception e) {
@@ -262,7 +306,8 @@ public class VideoServiceImpl implements VideoService {
                 // 缩略图生成失败不影响封面上传
             }
 
-            return Result.success(coverUrl);
+            com.flowbrain.viewx.pojo.vo.CoverUploadVO vo = new com.flowbrain.viewx.pojo.vo.CoverUploadVO(coverUrl, thumbnailUrl);
+            return Result.success(vo);
         } catch (Exception e) {
             log.error("封面上传失败", e);
             return Result.error(500, "封面上传失败: " + e.getMessage());

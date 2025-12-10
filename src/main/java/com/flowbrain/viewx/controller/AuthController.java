@@ -28,9 +28,10 @@ public class AuthController {
     }
 
     @PostMapping("/code")
-    public String getVerificationCode(@RequestBody Map<String, String> payload) {
+    public Result<String> getVerificationCode(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
-        return emailService.sendVerificationCode(email);
+        String code = emailService.sendVerificationCode(email);
+        return Result.success(code, "验证码已发送");
     }
 
     @PostMapping("/register")

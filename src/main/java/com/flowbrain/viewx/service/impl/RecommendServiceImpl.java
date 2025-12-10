@@ -79,7 +79,11 @@ public class RecommendServiceImpl implements RecommendService {
             // 获取 User (nickname)
             com.flowbrain.viewx.pojo.entity.User uploader = userMapper.selectById(video.getUploaderId());
             if (uploader != null) {
-                vo.setUploaderNickname(uploader.getNickname());
+                if (uploader.getNickname() != null && !uploader.getNickname().isEmpty()) {
+                    vo.setUploaderNickname(uploader.getNickname());
+                } else {
+                    vo.setUploaderNickname(uploader.getUsername());
+                }
             }
 
             // 获取 UserDetail (avatar)

@@ -22,20 +22,20 @@ public class MyBatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        
+
         // 1. 分页插件 (必须配置，否则分页不生效)
         PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor(DbType.POSTGRE_SQL);
         paginationInterceptor.setMaxLimit(1000L); // 单页最大数量限制，防止恶意查询
         paginationInterceptor.setOverflow(false); // 溢出总页数后是否进行处理（默认不处理）
         interceptor.addInnerInterceptor(paginationInterceptor);
-        
+
         // 2. 乐观锁插件 (如果使用 @Version 注解)
         interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
-        
+
         // 3. 防止全表更新与删除插件 (生产环境强烈推荐)
         // 防止执行 UPDATE/DELETE 时没有 WHERE 条件
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
-        
+
         return interceptor;
     }
 
@@ -49,14 +49,22 @@ public class MyBatisPlusConfig {
             @Override
             public void insertFill(MetaObject metaObject) {
                 // 插入时自动填充创建时间和更新时间
+                LocalDateTime now = LocalDateTime.now();
+
+                // 支持 Date 类型的字段
                 this.strictInsertFill(metaObject, "registerTime", java.util.Date.class, new java.util.Date());
                 this.strictInsertFill(metaObject, "updateTime", java.util.Date.class, new java.util.Date());
+
+                // 支持 LocalDateTime 类型的字段
+                this.strictInsertFill(metaObject, "createdAt", LocalDateTime.class, now);
+                this.strictInsertFill(metaObject, "updatedAt", LocalDateTime.class, now);
             }
 
             @Override
             public void updateFill(MetaObject metaObject) {
                 // 更新时自动填充更新时间
                 this.strictUpdateFill(metaObject, "updateTime", java.util.Date.class, new java.util.Date());
+                this.strictUpdateFill(metaObject, "updatedAt", LocalDateTime.class, LocalDateTime.now());
             }
         };
     }

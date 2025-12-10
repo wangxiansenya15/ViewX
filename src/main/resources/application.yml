@@ -28,6 +28,21 @@ spring:
       max-file-size: 100MB
       max-request-size: 115MB
 
+  # Security 配置
+  security:
+    filter:
+      # 禁用 Observation 以避免 StackOverflowError
+      dispatcher-types: request
+
+# 禁用 Spring Actuator 的 Observation（如果启用了 Actuator）
+management:
+  observations:
+    filter:
+      enabled: false
+  metrics:
+    enable:
+      security: false
+
 # MyBatis-Plus 配置
 mybatis-plus:
   configuration:
