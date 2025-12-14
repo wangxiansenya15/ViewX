@@ -7,6 +7,7 @@ import com.flowbrain.viewx.service.RecommendService;
 import com.flowbrain.viewx.service.StorageStrategy;
 import com.flowbrain.viewx.dao.UserDetailMapper;
 import com.flowbrain.viewx.pojo.entity.UserDetail;
+import com.flowbrain.viewx.common.RedisKeyConstants;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,15 +40,16 @@ public class RecommendServiceImpl implements RecommendService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final String TRENDING_KEY = "viewx:video:trending";
-
     @Override
     public List<com.flowbrain.viewx.pojo.vo.VideoListVO> getTrendingVideos(int page, int size) {
         int start = (page - 1) * size;
         int end = start + size - 1;
 
+        // 使用标准的 Redis Key
+        String trendingKey = RedisKeyConstants.Recommend.getTrendingKey();
+
         // Fetch top videos from Redis ZSet
-        Set<Object> videoIds = redisTemplate.opsForZSet().reverseRange(TRENDING_KEY, start, end);
+        Set<Object> videoIds = redisTemplate.opsForZSet().reverseRange(trendingKey, start, end);
 
         List<Video> videos = new ArrayList<>();
         if (videoIds == null || videoIds.isEmpty()) {
@@ -136,7 +138,8 @@ public class RecommendServiceImpl implements RecommendService {
 
         double score = calculateScore(video);
 
-        redisTemplate.opsForZSet().add(TRENDING_KEY, videoId.toString(), score);
+        String trendingKey = RedisKeyConstants.Recommend.getTrendingKey();
+        redisTemplate.opsForZSet().add(trendingKey, videoId.toString(), score);
         log.debug("Updated score for video {}: {}", videoId, score);
     }
 

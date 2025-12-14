@@ -35,15 +35,20 @@
     <!-- === DESKTOP LAYOUT === -->
     <div v-else class="h-full w-full flex flex-col relative z-0">
        <NavBar 
+         v-if="!route.meta.hideHeader"
          :theme="theme" 
          :is-logged-in="isLoggedIn" 
          @toggle-sidebar="desktopSidebarOpen = !desktopSidebarOpen" 
          @open-login="showLoginModal = true"
          @logout="handleLogout" 
+         @navigate="handleDesktopNavigation"
        />
 
-       <div class="flex flex-1 overflow-hidden relative z-10">
-         <Sidebar class="hidden md:flex" v-show="desktopSidebarOpen" />
+       <div :class="['flex flex-1 overflow-hidden relative z-10', !route.meta.hideHeader ? 'pt-14 md:pt-16' : '']">
+         <Sidebar class="hidden md:flex" v-show="desktopSidebarOpen && !route.meta.hideSidebar" 
+           @change-tab="handleDesktopTabChange"
+           @navigate="handleDesktopNavigation"
+         />
          
          <main class="flex-1 overflow-y-auto scroll-smooth relative" id="desktop-main">
             <router-view />
@@ -155,6 +160,42 @@ const handleLogout = async () => {
 const handleLoginSuccess = () => {
   isLoggedIn.value = true
   showLoginModal.value = false
+}
+
+const handleDesktopNavigation = (view: string) => {
+  switch (view) {
+    case 'home':
+      router.push('/')
+      break
+    case 'settings':
+      router.push('/settings')
+      break
+    case 'profile':
+      if (isLoggedIn.value) router.push('/profile')
+      else showLoginModal.value = true
+      break
+    case 'admin':
+      router.push('/admin')
+      break
+    case 'upload':
+      if (isLoggedIn.value) router.push('/upload')
+      else showLoginModal.value = true
+      break
+    default:
+      console.warn('Unknown view:', view)
+  }
+}
+
+const handleDesktopTabChange = (tabId: string) => {
+  // Sidebar tabs mapping
+  if (tabId === 'home') router.push('/')
+  else if (tabId === 'profile') {
+    if (isLoggedIn.value) router.push('/profile')
+    else showLoginModal.value = true
+  }
+  else if (tabId === 'trending') router.push('/trending') // Ensure route exists or handle appropriately
+  else if (tabId === 'subs') router.push('/subscriptions')
+  else if (tabId === 'library') router.push('/library')
 }
 
 onMounted(() => {

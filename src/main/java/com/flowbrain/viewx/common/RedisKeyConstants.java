@@ -26,6 +26,9 @@ public class RedisKeyConstants {
     public static final String CAPTCHA_KEY = "captcha:";
     public static final String VERIFICATION_CODE_KEY = "verification:code:";
 
+    // video-related
+    public static final String VIDEO_KEY = "videos:";
+
     // 权限相关
     public static final String PERMISSION_KEY = "permissions:";
     public static final String ROLE_KEY = "roles:";
@@ -135,6 +138,36 @@ public class RedisKeyConstants {
 
         public static String getRateLimitKey(String resource, String identifier) {
             return buildKey(RATE_LIMIT_KEY, resource, ":", identifier);
+        }
+    }
+
+    /**
+     * 推荐系统相关的Key构建方法
+     */
+    public static class Recommend {
+        // 热门视频排行榜 (ZSet: videoId -> score)
+        public static String getTrendingKey() {
+            return buildKey(VIDEO_KEY, "recommend:trending");
+        }
+
+        // 个性化推荐流 (ZSet: videoId -> score)
+        public static String getFeedKey(Long userId) {
+            return buildKey(VIDEO_KEY, "recommend:feed:", String.valueOf(userId));
+        }
+
+        // 用户观看历史 (ZSet: videoId -> timestamp)
+        public static String getWatchHistoryKey(Long userId) {
+            return buildKey(VIDEO_KEY, "recommend:watch:history:", String.valueOf(userId));
+        }
+
+        // 用户兴趣模型 (ZSet: video:videoId -> score)
+        public static String getUserInterestKey(Long userId) {
+            return buildKey(VIDEO_KEY, "recommend:interest:", String.valueOf(userId));
+        }
+
+        // 幂等性检查 (String: eventId -> "1")
+        public static String getProcessedEventKey(String eventId) {
+            return buildKey(VIDEO_KEY, "recommend:processed:", eventId);
         }
     }
 }

@@ -39,7 +39,12 @@ const router = createRouter({
             component: () => import('../views/Login.vue'),
             meta: { hideHeader: true, hideNav: true }
         },
-        // Add other routes as needed
+        {
+            path: '/admin',
+            name: 'admin',
+            component: () => import('../views/admin/AdminLayout.vue'),
+            meta: { hideHeader: true, hideNav: true, hideSidebar: true }
+        }
     ]
 })
 

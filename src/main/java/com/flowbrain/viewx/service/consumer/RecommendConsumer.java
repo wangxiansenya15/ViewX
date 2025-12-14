@@ -2,6 +2,7 @@ package com.flowbrain.viewx.service.consumer;
 
 import com.flowbrain.viewx.config.RabbitMQConfig;
 import com.flowbrain.viewx.common.EventType;
+import com.flowbrain.viewx.common.RedisKeyConstants;
 import com.flowbrain.viewx.pojo.dto.BaseEvent;
 import com.flowbrain.viewx.service.RecommendService;
 import lombok.extern.slf4j.Slf4j;
@@ -35,8 +36,8 @@ public class RecommendConsumer {
             Long userId = event.getUserId();
             Long videoId = (Long) event.getData().get("videoId");
 
-            // 幂等性检查（防止重复消费）
-            String idempotentKey = "recommend:processed:" + event.getEventId();
+            // 幂等性检查（防止重复消费）- 使用标准 Key
+            String idempotentKey = RedisKeyConstants.Recommend.getProcessedEventKey(event.getEventId());
             Boolean isProcessed = redisTemplate.opsForValue().setIfAbsent(idempotentKey, "1", 5, TimeUnit.MINUTES);
 
             if (Boolean.FALSE.equals(isProcessed)) {
@@ -83,13 +84,13 @@ public class RecommendConsumer {
     private void handleVideoPlay(Long userId, Long videoId, BaseEvent event) {
         Integer watchDuration = (Integer) event.getData().get("watchDuration");
 
-        // 更新用户观看历史
-        String historyKey = "user:watch:history:" + userId;
+        // 更新用户观看历史 - 使用标准 Key
+        String historyKey = RedisKeyConstants.Recommend.getWatchHistoryKey(userId);
         redisTemplate.opsForZSet().add(historyKey, videoId, System.currentTimeMillis());
 
         // 如果观看时长超过30秒，认为是有效观看
         if (watchDuration != null && watchDuration > 30) {
-            String interestKey = "user:interest:" + userId;
+            String interestKey = RedisKeyConstants.Recommend.getUserInterestKey(userId);
             redisTemplate.opsForZSet().incrementScore(interestKey, "video:" + videoId, 1.0);
         }
 
@@ -100,7 +101,7 @@ public class RecommendConsumer {
      * 处理点赞事件
      */
     private void handleVideoLike(Long userId, Long videoId) {
-        String interestKey = "user:interest:" + userId;
+        String interestKey = RedisKeyConstants.Recommend.getUserInterestKey(userId);
         redisTemplate.opsForZSet().incrementScore(interestKey, "video:" + videoId, 3.0);
         log.info("更新用户兴趣（点赞）: userId={}, videoId={}", userId, videoId);
     }
@@ -109,7 +110,7 @@ public class RecommendConsumer {
      * 处理取消点赞事件
      */
     private void handleVideoUnlike(Long userId, Long videoId) {
-        String interestKey = "user:interest:" + userId;
+        String interestKey = RedisKeyConstants.Recommend.getUserInterestKey(userId);
         redisTemplate.opsForZSet().incrementScore(interestKey, "video:" + videoId, -3.0);
         log.info("更新用户兴趣（取消点赞）: userId={}, videoId={}", userId, videoId);
     }
@@ -118,7 +119,7 @@ public class RecommendConsumer {
      * 处理收藏事件
      */
     private void handleVideoFavorite(Long userId, Long videoId) {
-        String interestKey = "user:interest:" + userId;
+        String interestKey = RedisKeyConstants.Recommend.getUserInterestKey(userId);
         redisTemplate.opsForZSet().incrementScore(interestKey, "video:" + videoId, 5.0);
         log.info("更新用户兴趣（收藏）: userId={}, videoId={}", userId, videoId);
     }
@@ -127,7 +128,7 @@ public class RecommendConsumer {
      * 处理分享事件
      */
     private void handleVideoShare(Long userId, Long videoId) {
-        String interestKey = "user:interest:" + userId;
+        String interestKey = RedisKeyConstants.Recommend.getUserInterestKey(userId);
         redisTemplate.opsForZSet().incrementScore(interestKey, "video:" + videoId, 2.0);
         log.info("更新用户兴趣（分享）: userId={}, videoId={}", userId, videoId);
     }

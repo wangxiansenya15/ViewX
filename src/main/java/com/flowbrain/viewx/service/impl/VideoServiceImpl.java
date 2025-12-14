@@ -49,6 +49,9 @@ public class VideoServiceImpl implements VideoService {
     @Autowired
     private com.flowbrain.viewx.dao.UserDetailMapper userDetailMapper;
 
+    @Autowired
+    private com.flowbrain.viewx.service.RecommendService recommendService;
+
     @Override
     public Result<VideoDetailVO> getVideoDetail(Long videoId, Long userId) {
         Video video = videoMapper.selectById(videoId);
@@ -126,7 +129,7 @@ public class VideoServiceImpl implements VideoService {
             // 2. 处理封面图片上传 (如果提供了封面文件)
             String coverUrl = null;
             String thumbnailUrl = null;
-            
+
             if (coverFile != null && !coverFile.isEmpty()) {
                 try {
                     // 上传封面图片
@@ -143,7 +146,8 @@ public class VideoServiceImpl implements VideoService {
                     // 生成缩略图
                     try {
                         byte[] thumbnailBytes = videoProcessingService.generateThumbnailFromCover(coverFile);
-                        String thumbnailFilename = "videos/thumbnails/thumb_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+                        String thumbnailFilename = "videos/thumbnails/thumb_" + userId + "_"
+                                + System.currentTimeMillis() + ".jpg";
                         String storedThumbnailFilename = storageStrategy.storeFile(
                                 new java.io.ByteArrayInputStream(thumbnailBytes),
                                 thumbnailFilename);
@@ -153,7 +157,7 @@ public class VideoServiceImpl implements VideoService {
                         log.warn("缩略图生成失败，使用封面图作为缩略图: {}", e.getMessage());
                         thumbnailUrl = coverUrl; // 降级处理
                     }
-                    
+
                     log.info("封面上传成功: coverUrl={}, thumbnailUrl={}", coverUrl, thumbnailUrl);
                 } catch (Exception e) {
                     log.error("封面上传失败，继续处理视频上传", e);
@@ -194,7 +198,7 @@ public class VideoServiceImpl implements VideoService {
             }
 
             videoMapper.insert(video);
-            log.info("用户 {} 上传视频成功，ID: {}, VideoURL: {}, CoverURL: {}, ThumbnailURL: {}", 
+            log.info("用户 {} 上传视频成功，ID: {}, VideoURL: {}, CoverURL: {}, ThumbnailURL: {}",
                     userId, video.getId(), videoUrl, coverUrl, thumbnailUrl);
 
             // 4. 提取并关联话题
@@ -214,6 +218,14 @@ public class VideoServiceImpl implements VideoService {
             if (!topics.isEmpty()) {
                 topicService.associateTopicsWithVideo(video.getId(), topics);
                 log.info("视频 {} 关联了 {} 个话题: {}", video.getId(), topics.size(), topics);
+            }
+
+            // 5. 更新推荐系统的热度分数，使新视频立即出现在首页
+            try {
+                recommendService.updateVideoScore(video.getId());
+                log.info("视频 {} 已加入推荐列表", video.getId());
+            } catch (Exception e) {
+                log.warn("更新推荐分数失败，不影响视频上传: {}", e.getMessage());
             }
 
             return Result.success(video.getId());
@@ -306,7 +318,8 @@ public class VideoServiceImpl implements VideoService {
                 // 缩略图生成失败不影响封面上传
             }
 
-            com.flowbrain.viewx.pojo.vo.CoverUploadVO vo = new com.flowbrain.viewx.pojo.vo.CoverUploadVO(coverUrl, thumbnailUrl);
+            com.flowbrain.viewx.pojo.vo.CoverUploadVO vo = new com.flowbrain.viewx.pojo.vo.CoverUploadVO(coverUrl,
+                    thumbnailUrl);
             return Result.success(vo);
         } catch (Exception e) {
             log.error("封面上传失败", e);
