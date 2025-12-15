@@ -1,10 +1,10 @@
 <template>
   <div class="settings-container">
-    <div class="settings-header relative flex items-center justify-center mb-8">
-      <button @click="$router.push('/')" class="absolute left-0 p-2 text-white/80 hover:text-white rounded-full bg-white/5 backdrop-blur-md">
+    <div class="settings-header relative flex items-center justify-center mb-8 py-2">
+      <button @click="$router.push('/')" class="absolute left-0 z-10 p-2 text-[var(--text)]/80 hover:text-[var(--text)] rounded-full bg-[var(--surface)] border border-[var(--border)] backdrop-blur-md transition-colors">
         <ArrowLeft class="w-6 h-6" />
       </button>
-      <h1 class="page-title text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 m-0">{{ t('settings.title') }}</h1>
+      <h1 class="page-title text-2xl font-bold text-[var(--text)] text-center leading-relaxed tracking-wide z-0">{{ t('settings.title') }}</h1>
     </div>
 
     <div class="settings-content pb-20">
@@ -17,12 +17,15 @@
         
         <div class="setting-item">
           <div class="setting-info">
-            <span class="label">{{ t('settings.appearance.darkMode') }}</span>
+            <transition name="slide-fade" mode="out-in">
+              <span :key="isDarkMode" class="label block">
+                 {{ isDarkMode ? t('settings.appearance.darkMode') : t('settings.appearance.lightMode') }}
+              </span>
+            </transition>
             <span class="description">{{ t('settings.appearance.darkModeDesc') }}</span>
           </div>
           <el-switch
             v-model="isDarkMode"
-            @change="toggleTheme"
             active-color="#6366f1"
           />
         </div>
@@ -129,9 +132,16 @@
         <div class="setting-item">
           <div class="setting-info">
             <span class="label">{{ t('settings.about.version') }}</span>
-            <span class="description">v1.0.0 (Beta)</span>
+            <span class="description">{{ appVersion }}</span>
           </div>
-          <el-button link type="primary">{{ t('settings.about.checkUpdate') }}</el-button>
+          <el-button 
+            link 
+            type="primary" 
+            @click="handleCheckUpdate"
+            :loading="checkingUpdate"
+          >
+            {{ checkingUpdate ? '检查中...' : t('settings.about.checkUpdate') }}
+          </el-button>
         </div>
         
         <div class="setting-item">
@@ -150,6 +160,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeft, LogOut, Users, ChevronRight } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
+import { getVersionChecker } from '@/utils/versionChecker'
 
 const props = defineProps<{
   isLoggedIn: boolean
@@ -170,6 +181,12 @@ const isDarkMode = computed({
 })
 
 const twoFactorEnabled = ref(false)
+const checkingUpdate = ref(false)
+
+// 应用版本（从环境变量或package.json读取）
+const appVersion = computed(() => {
+  return import.meta.env.VITE_APP_VERSION || '1.0.0'
+})
 
 const browserInfo = computed(() => {
   const ua = navigator.userAgent
@@ -180,8 +197,17 @@ const browserInfo = computed(() => {
   return `${browserName} on ${navigator.platform}`
 })
 
-function toggleTheme() {
-  // Logic handled by computed setter
+/**
+ * 处理检查更新
+ */
+const handleCheckUpdate = async () => {
+  checkingUpdate.value = true
+  try {
+    const versionChecker = getVersionChecker(appVersion.value)
+    await versionChecker.manualCheck()
+  } finally {
+    checkingUpdate.value = false
+  }
 }
 
 const handleLogout = () => {
@@ -205,7 +231,7 @@ const handleSwitchAccount = () => {
   margin: 0 auto;
   padding: 40px 20px;
   animation: fadeIn 0.5s ease;
-  color: #fff;
+  color: var(--text);
 }
 
 /* CSS Variables Fallback/Definition for this component scope if global ones are missing */
@@ -354,7 +380,7 @@ const handleSwitchAccount = () => {
 /* 移动端适配 */
 @media (max-width: 768px) {
   .settings-container {
-    padding: 60px 16px 100px 16px; /* Increased top padding */
+    padding: max(20px, env(safe-area-inset-top)) 16px 100px 16px;
     min-height: 100%;
     overflow-y: auto;
   }
@@ -366,5 +392,20 @@ const handleSwitchAccount = () => {
   .glass-panel {
     padding: 20px;
   }
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 </style>

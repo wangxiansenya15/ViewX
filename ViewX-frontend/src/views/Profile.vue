@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full w-full overflow-y-auto bg-[#0f0f0f] pt-20 pb-20 px-4 sm:px-6 lg:px-8 custom-scrollbar">
+  <div class="h-full w-full overflow-y-auto bg-[var(--bg)] pt-20 pb-20 px-4 sm:px-6 lg:px-8 custom-scrollbar">
     <div class="max-w-7xl mx-auto">
       
       <!-- Guest State -->
@@ -15,7 +15,7 @@
                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                      </svg>
                  </div>
-                 <h2 class="text-2xl font-bold text-white mb-2">登录 ViewX</h2>
+                 <h2 class="text-2xl font-bold text-[var(--text)] mb-2">登录 ViewX</h2>
                  <p class="text-gray-400 mb-8">登录后查看个人主页、收藏视频并与其他用户互动</p>
                  <button 
                     @click="$router.push('/login')" 
@@ -56,7 +56,7 @@
                 <img 
                   :src="profile?.avatarUrl || defaultAvatar" 
                   alt="Avatar" 
-                  class="w-full h-full rounded-full object-cover border-4 border-[#0f0f0f]"
+                  class="w-full h-full rounded-full object-cover border-4 border-[var(--bg)]"
                 />
                 <!-- Upload Overlay -->
                 <div class="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -79,7 +79,7 @@
             <div class="flex-1 text-center md:text-left">
               <div class="flex flex-col md:flex-row items-center md:items-start justify-between gap-4">
                 <div>
-                  <h1 class="text-3xl font-bold text-white mb-2 flex items-center gap-2 justify-center md:justify-start">
+                  <h1 class="text-3xl font-bold text-[var(--text)] mb-2 flex items-center gap-2 justify-center md:justify-start">
                     {{ profile?.nickname || profile?.username }}
                     <span class="px-2 py-0.5 rounded-full bg-white/10 text-xs text-indigo-300 border border-white/5">
                         Level 21
@@ -97,13 +97,13 @@
                 
                 <!-- Actions -->
                 <div class="flex gap-3">
-                  <button class="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-2">
+                  <button class="px-4 py-2 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-[var(--text)] transition-colors flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                     分享
                   </button>
-                  <button @click="openEditModal" class="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center gap-2" title="编辑资料">
+                  <button @click="openEditModal" class="px-4 py-2 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-[var(--text)] transition-colors flex items-center gap-2" title="编辑资料">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
@@ -113,17 +113,17 @@
               </div>
               
               <!-- Stats -->
-              <div class="flex items-center gap-8 mt-8 border-t border-white/5 pt-6 justify-center md:justify-start">
+              <div class="flex items-center gap-8 mt-8 border-t border-gray-500/20 pt-6 justify-center md:justify-start">
                 <div class="text-center md:text-left">
-                  <span class="text-xl font-bold text-white mr-1">{{ formatNumber(profile?.followingCount || 870) }}</span>
+                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followingCount || 870) }}</span>
                   <span class="text-sm text-gray-500">关注</span>
                 </div>
                 <div class="text-center md:text-left">
-                  <span class="text-xl font-bold text-white mr-1">{{ formatNumber(profile?.followersCount || 103) }}</span>
+                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followersCount || 103) }}</span>
                   <span class="text-sm text-gray-500">粉丝</span>
                 </div>
                 <div class="text-center md:text-left">
-                  <span class="text-xl font-bold text-white mr-1">{{ formatNumber(profile?.likeCount || 293) }}</span>
+                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.likeCount || 293) }}</span>
                   <span class="text-sm text-gray-500">获赞</span>
                 </div>
               </div>
@@ -139,7 +139,7 @@
               :key="tab.id"
               @click="activeTab = tab.id"
               class="relative px-2 py-4 text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
-              :class="activeTab === tab.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'"
+              :class="activeTab === tab.id ? 'text-[var(--text)]' : 'text-gray-500 hover:text-gray-300'"
             >
               <component :is="tab.icon" class="w-4 h-4" />
               {{ t(tab.labelKey) }}
@@ -470,10 +470,10 @@ onMounted(() => {
 
 <style scoped>
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -484,13 +484,5 @@ onMounted(() => {
     scrollbar-width: none;
 }
 
-:root[data-theme='light'] .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
-}
 
-:root[data-theme='light'] .text-white {
-  color: #1a1a1a;
-}
 </style>

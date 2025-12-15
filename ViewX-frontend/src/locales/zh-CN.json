@@ -23,15 +23,17 @@
     "sidebar": {
         "home": "首页推荐",
         "trending": "热门趋势",
-        "subs": "关注动态",
-        "library": "播放历史",
+        "subs": "订阅",
+        "library": "媒体库",
         "me": "我的",
         "settings": "设置",
         "gemini": {
-            "title": "Gemini Power",
-            "desc": "体验 AI 驱动的视频洞察与即时互动。",
+            "title": "Gemini AI",
+            "desc": "体验下一代 AI 视频分析与生成功能",
             "more": "了解更多"
-        }
+        },
+        "switchToGrid": "切换网格模式",
+        "switchToFeed": "切换推荐流"
     },
     "profile": {
         "works": "作品",
@@ -59,6 +61,7 @@
         "appearance": {
             "title": "外观设置",
             "darkMode": "深色模式",
+            "lightMode": "亮色模式",
             "darkModeDesc": "切换应用程序的深色/浅色外观",
             "language": "界面语言",
             "languageDesc": "选择您偏好的显示语言"

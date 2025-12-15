@@ -408,3 +408,6 @@ export const contentApi = {
     }
 }
 
+// 导出系统 API
+export { systemApi } from './system'
+export type { SystemVersionInfo } from './system'

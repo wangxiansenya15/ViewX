@@ -5,9 +5,17 @@
       <MobileFeed :videos="feedVideos" @open-comments="openComments" @load-more="handleLoadMore" />
     </div>
 
-    <!-- Desktop Masonry -->
-    <div v-else class="h-full px-6 py-6 scroll-smooth">
-       <VideoMasonry :videos="feedVideos" @open-video="openDesktopVideo" />
+    <!-- Desktop View -->
+    <div v-else class="h-full w-full">
+       <!-- Grid Mode -->
+       <div v-if="viewMode === 'grid'" class="h-full w-full px-6 py-6 overflow-y-auto scroll-smooth">
+           <VideoMasonry :videos="feedVideos" @open-video="openDesktopVideo" />
+       </div>
+       
+       <!-- Feed Mode -->
+       <div v-else class="h-full w-full">
+           <DesktopFeed :videos="feedVideos" @load-more="handleLoadMore" />
+       </div>
     </div>
   </div>
 </template>
@@ -17,11 +25,16 @@ import { ref, onMounted, inject, type Ref } from 'vue'
 import { videoApi, type VideoVO } from '@/api'
 import MobileFeed from '@/components/mobile/MobileFeed.vue'
 import VideoMasonry from '@/components/VideoMasonry.vue'
+import DesktopFeed from '@/components/desktop/DesktopFeed.vue'
+import { useHomeViewMode } from '@/composables/useHomeViewMode'
 
 // Inject provided keys from App.vue
 const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
 const openCommentsAction = inject<(v: VideoVO) => void>('openComments')
 const openDesktopVideoAction = inject<(v: VideoVO) => void>('openDesktopVideo')
+
+// View Mode
+const { viewMode } = useHomeViewMode()
 
 const feedVideos = ref<VideoVO[]>([])
 const page = ref(1)
@@ -49,6 +62,7 @@ const fetchVideos = async (isLoadMore = false) => {
              // Merge detail fields that might be missing in list VO
              videoUrl: detail.videoUrl, 
              isLiked: detail.isLiked,
+             isFavorited: detail.isFavorited,
              tags: detail.tags,
              description: detail.description
            }))

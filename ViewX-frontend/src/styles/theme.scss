@@ -10,34 +10,35 @@
 
 [data-theme="light"] {
   --bg: #f8fafc;
-  --bg-glass: rgba(255, 255, 255, 0.9);
-  --bg-glass-hover: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.45);
+  --bg-glass-hover: rgba(255, 255, 255, 0.75);
   --text: #0f172a;
   --text-secondary: #334155;
   --muted: #64748b;
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
-  --surface: rgba(255, 255, 255, 0.9);
-  --surface-hover: #ffffff;
-  --border: #e2e8f0;
-  --border-hover: #cbd5e1;
-  --shadow: rgba(0, 0, 0, 0.05);
+  --surface: rgba(255, 255, 255, 0.45);
+  --surface-hover: rgba(255, 255, 255, 0.8);
+  --border: #cbd5e1;
+  --border-hover: #94a3b8;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --blur: 24px;
 }
 
 [data-theme="dark"] {
   --bg: #0b0f14;
-  --bg-glass: rgba(16, 20, 26, 0.65);
-  --bg-glass-hover: rgba(16, 20, 26, 0.75);
+  --bg-glass: rgba(30, 41, 59, 0.7);
+  --bg-glass-hover: rgba(30, 41, 59, 1);
   --text: #e5e7eb;
   --text-secondary: #d1d5db;
   --muted: #9ca3af;
   --primary: #60a5fa;
   --primary-hover: #3b82f6;
-  --surface: rgba(17, 24, 39, 0.8);
-  --surface-hover: rgba(17, 24, 39, 0.95);
+  --surface: rgba(30, 41, 59, 0.6);
+  --surface-hover: rgba(30, 41, 59, 1);
   --border: rgba(255, 255, 255, 0.1);
-  --border-hover: rgba(255, 255, 255, 0.15);
-  --shadow: rgba(0, 0, 0, 0.3);
+  --border-hover: rgba(255, 255, 255, 0.3);
+  --shadow: rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -56,7 +57,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -66,6 +67,7 @@ body {
 html[data-theme="light"] body {
   -webkit-font-smoothing: auto;
   -moz-osx-font-smoothing: auto;
+  font-weight: 500;
 }
 
 .glass {
@@ -142,7 +144,7 @@ html[data-theme="light"] body {
   }
 
   body {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   /* 移动端触摸优化 */

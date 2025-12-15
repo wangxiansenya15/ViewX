@@ -1,5 +1,5 @@
 <template>
-  <div id="app" class="h-screen w-full flex flex-col relative selection:bg-indigo-500 selection:text-white bg-[#0f0f0f] text-white overflow-hidden">
+  <div id="app" class="h-screen w-full flex flex-col relative selection:bg-indigo-500 selection:text-white bg-[var(--bg)] text-[var(--text)] overflow-hidden transition-colors duration-300">
     
     <!-- Global Loading -->
     <div class="loading-bar" :style="{ width: loadPercent + '%', opacity: (isLoading && !isInitialLoad) ? 1 : 0 }"></div>
@@ -19,7 +19,7 @@
        <div class="h-full w-full relative overflow-y-auto no-scrollbar scroll-smooth">
          <router-view v-slot="{ Component }">
             <keep-alive>
-               <component :is="Component" />
+               <component :is="Component" :theme="theme" :isLoggedIn="isLoggedIn" @toggle-theme="toggleTheme" />
             </keep-alive>
          </router-view>
        </div>
@@ -42,6 +42,7 @@
          @open-login="showLoginModal = true"
          @logout="handleLogout" 
          @navigate="handleDesktopNavigation"
+         @toggle-theme="toggleTheme"
        />
 
        <div :class="['flex flex-1 overflow-hidden relative z-10', !route.meta.hideHeader ? 'pt-14 md:pt-16' : '']">
@@ -51,7 +52,9 @@
          />
          
          <main class="flex-1 overflow-y-auto scroll-smooth relative" id="desktop-main">
-            <router-view />
+            <router-view v-slot="{ Component }">
+               <component :is="Component" :theme="theme" :isLoggedIn="isLoggedIn" @toggle-theme="toggleTheme" />
+            </router-view>
          </main>
        </div>
     </div>
@@ -69,10 +72,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, provide, computed } from 'vue'
+import { ref, onMounted, onUnmounted, provide, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type VideoVO } from '@/api'
 import { useWindowSize } from '@vueuse/core'
+import { getVersionChecker, destroyVersionChecker } from '@/utils/versionChecker'
 
 // Components
 import NavBar from './components/NavBar.vue'
@@ -120,10 +124,22 @@ const openDesktopVideo = (video: VideoVO) => {
   currentVideo.value = video
 }
 
+const toggleTheme = () => {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  localStorage.setItem('theme', theme.value)
+}
+
+// Watch theme changes
+watch(theme, (newTheme) => {
+  document.documentElement.setAttribute('data-theme', newTheme)
+}, { immediate: true })
+
 provide('isMobile', isMobile)
 provide('openComments', openComments)
 provide('openDesktopVideo', openDesktopVideo)
 provide('isLoggedIn', isLoggedIn)
+provide('theme', theme)
+provide('toggleTheme', toggleTheme)
 
 // === AUTH & LOAD LOGIC ===
 const triggerLoad = (cb?: () => void) => {
@@ -201,7 +217,34 @@ const handleDesktopTabChange = (tabId: string) => {
 onMounted(() => {
   checkAuth()
   triggerLoad()
+  
+  // init theme
+  const saved = localStorage.getItem('theme') as 'light' | 'dark' | null
+  if (saved) {
+    theme.value = saved
+  }
+  
+  // init version checker
+  const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0'
+  const versionChecker = getVersionChecker(appVersion)
+  versionChecker.init()
+  
+  // Listen for auth state changes (e.g., from OAuth callback)
+  window.addEventListener('auth-state-changed', handleAuthStateChange)
 })
+
+onUnmounted(() => {
+  destroyVersionChecker()
+  window.removeEventListener('auth-state-changed', handleAuthStateChange)
+})
+
+// Handle auth state change event
+const handleAuthStateChange = (event: Event) => {
+  const customEvent = event as CustomEvent
+  if (customEvent.detail?.isLoggedIn) {
+    checkAuth()
+  }
+}
 </script>
 
 <style scoped>

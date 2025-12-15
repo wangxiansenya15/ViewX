@@ -40,6 +40,12 @@ const router = createRouter({
             meta: { hideHeader: true, hideNav: true }
         },
         {
+            path: '/oauth/callback',
+            name: 'oauth-callback',
+            component: () => import('../views/OAuthCallback.vue'),
+            meta: { hideHeader: true, hideNav: true, hideSidebar: true }
+        },
+        {
             path: '/admin',
             name: 'admin',
             component: () => import('../views/admin/AdminLayout.vue'),

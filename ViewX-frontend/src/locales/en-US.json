@@ -25,13 +25,15 @@
         "trending": "Trending",
         "subs": "Subscriptions",
         "library": "Library",
-        "me": "Me",
+        "me": "Profile",
         "settings": "Settings",
         "gemini": {
-            "title": "Gemini Power",
-            "desc": "Experience AI-driven video insights.",
+            "title": "Gemini AI",
+            "desc": "Experience next-gen AI video analysis & generation.",
             "more": "Learn More"
-        }
+        },
+        "switchToGrid": "Switch Grid",
+        "switchToFeed": "Switch Feed"
     },
     "profile": {
         "works": "Works",
@@ -59,6 +61,7 @@
         "appearance": {
             "title": "Appearance",
             "darkMode": "Dark Mode",
+            "lightMode": "Light Mode",
             "darkModeDesc": "Toggle dark/light appearance",
             "language": "Language",
             "languageDesc": "Choose your preferred language"

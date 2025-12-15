@@ -8,7 +8,22 @@
             activeTab === item.id ? 'bg-[var(--primary)] text-white font-medium shadow-lg' : 'text-[var(--muted)] hover:bg-[var(--bg)] hover:text-[var(--text)]']">
         <component :is="item.iconComponent"
           :class="['w-5 h-5 transition-transform group-hover:scale-110', activeTab === item.id ? 'text-white' : '']" />
-        <span class="hidden lg:block text-sm">{{ t(item.nameKey) }}</span>
+        <span class="hidden lg:block text-sm flex-1">{{ t(item.nameKey) }}</span>
+        
+        <!-- Toggle View Mode (Only for Home and when active) -->
+        <el-tooltip
+          v-if="item.id === 'home' && activeTab === 'home'"
+          :content="viewMode === 'feed' ? t('sidebar.switchToGrid') : t('sidebar.switchToFeed')"
+          placement="right"
+          :show-after="200"
+        >
+          <div 
+               class="hidden lg:flex items-center justify-center p-1.5 hover:bg-white/20 rounded-md transition-colors z-20"
+               @click.stop="toggleViewMode">
+             <LayoutGrid v-if="viewMode === 'feed'" class="w-4 h-4 text-white/90" />
+             <Smartphone v-else class="w-4 h-4 text-white/90" />
+          </div>
+        </el-tooltip>
       </a>
     </nav>
 
@@ -29,8 +44,9 @@
     <!-- Settings Button -->
     <div class="px-3 pb-4">
       <a @click="$emit('navigate', 'settings')"
-        class="flex items-center gap-4 px-4 py-3 rounded-xl text-[var(--muted)] hover:bg-[var(--bg)] hover:text-[var(--text)] transition-all cursor-pointer group">
-        <Settings class="w-5 h-5 transition-transform group-hover:rotate-90" />
+        :class="['flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer group',
+          activeTab === 'settings' ? 'bg-[var(--primary)] text-white font-medium shadow-lg' : 'text-[var(--muted)] hover:bg-[var(--bg)] hover:text-[var(--text)]']">
+        <Settings :class="['w-5 h-5 transition-transform group-hover:rotate-90', activeTab === 'settings' ? 'text-white' : '']" />
         <span class="hidden lg:block text-sm">{{ t('sidebar.settings') }}</span>
       </a>
     </div>
@@ -38,20 +54,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { Home, Flame, Users, Library, Sparkles, Settings, User } from 'lucide-vue-next'
+import { ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { Home, Flame, Users, Library, Sparkles, Settings, User, LayoutGrid, Smartphone } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { useHomeViewMode } from '@/composables/useHomeViewMode'
 
 const { t } = useI18n()
+const route = useRoute()
 const activeTab = ref('home')
+const { viewMode, toggleViewMode } = useHomeViewMode()
 
 const navItems = [
-  { id: 'home', nameKey: 'sidebar.home', iconComponent: Home },
-  { id: 'trending', nameKey: 'sidebar.trending', iconComponent: Flame },
-  { id: 'subs', nameKey: 'sidebar.subs', iconComponent: Users },
-  { id: 'library', nameKey: 'sidebar.library', iconComponent: Library },
-  { id: 'profile', nameKey: 'sidebar.me', iconComponent: User },
+  { id: 'home', nameKey: 'sidebar.home', iconComponent: Home, path: '/' },
+  { id: 'trending', nameKey: 'sidebar.trending', iconComponent: Flame, path: '/trending' },
+  { id: 'subs', nameKey: 'sidebar.subs', iconComponent: Users, path: '/subscriptions' },
+  { id: 'library', nameKey: 'sidebar.library', iconComponent: Library, path: '/library' },
+  { id: 'profile', nameKey: 'sidebar.me', iconComponent: User, path: '/profile' },
 ]
+
+watch(() => route.path, (newPath) => {
+  if (newPath === '/') activeTab.value = 'home'
+  else if (newPath.startsWith('/trending')) activeTab.value = 'trending'
+  else if (newPath.startsWith('/subscriptions')) activeTab.value = 'subs'
+  else if (newPath.startsWith('/library')) activeTab.value = 'library'
+  else if (newPath.startsWith('/profile')) activeTab.value = 'profile'
+  else if (newPath.startsWith('/settings')) activeTab.value = 'settings'
+  else activeTab.value = ''
+}, { immediate: true })
 
 defineEmits(['change-tab', 'navigate'])
 </script>
