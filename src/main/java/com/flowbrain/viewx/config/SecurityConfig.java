@@ -1,5 +1,4 @@
-  package com.flowbrain.viewx.config;
-
+package com.flowbrain.viewx.config;
 
 import com.flowbrain.viewx.common.Role;
 import com.flowbrain.viewx.pojo.entity.User;
@@ -47,7 +46,8 @@ public class SecurityConfig {
      * 安全过滤器链配置（6.x核心配置）
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, @Lazy JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+            @Lazy JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
@@ -57,24 +57,27 @@ public class SecurityConfig {
                                 "/oauth2/**",
                                 "/email/**",
                                 "/store/**",
+                                "/system/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-                                "/recommend/**").permitAll()
+                                "/recommend/**")
+                        .permitAll()
                         // 允许匿名访问视频详情和交互状态
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/videos/**", "/interactions/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/videos/**", "/interactions/**")
+                        .permitAll()
                         // 角色权限控制
-                        .requestMatchers("/comments/**",  "/user/**","/avatar/**","/payment/**", "/msg/**", "/videos/**", "/interactions/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
+                        .requestMatchers("/comments/**", "/user/**", "/avatar/**", "/payment/**", "/msg/**",
+                                "/videos/**", "/interactions/**")
+                        .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
                         .requestMatchers("/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         // 其他请求需要认证
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 // 异常处理
                 .exceptionHandling(e -> e
-                        .accessDeniedPage("/403")
-                )
+                        .accessDeniedPage("/403"))
                 // 禁用CSRF（适用于REST API场景）
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -112,7 +115,7 @@ public class SecurityConfig {
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
                     .password(user.getPassword())
-                    .roles(new String[]{(user.getRole().name())})
+                    .roles(new String[] { (user.getRole().name()) })
                     .build();
         };
     }
@@ -143,14 +146,13 @@ public class SecurityConfig {
         return source;
     }
 
-
     /**
      * 认证管理器
      */
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http,
-                                                       UserDetailsService userDetailsService,
-                                                       PasswordEncoder passwordEncoder) throws Exception {
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) throws Exception {
         AuthenticationManagerBuilder builder = http.getSharedObject(AuthenticationManagerBuilder.class);
         builder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder);
         return builder.build();

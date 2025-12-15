@@ -17,6 +17,11 @@ viewx:
     keep-alive-seconds: 60
     thread-name-prefix: "viewx-async-"
 
+# 应用版本配置
+app:
+  version: 0.12.2-dev
+  build-time: 2025-12-2 21:20:25
+
 # Spring 配置
 spring:
   profiles:
