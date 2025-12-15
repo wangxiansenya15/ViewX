@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
-import com.flowbrain.viewx.common.Role;
-import com.flowbrain.viewx.common.UserStatus;
+import com.flowbrain.viewx.common.enums.Role;
+import com.flowbrain.viewx.common.enums.UserStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

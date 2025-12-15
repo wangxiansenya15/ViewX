@@ -26,6 +26,8 @@
         "subs": "Subscriptions",
         "library": "Library",
         "me": "Profile",
+        "notifications": "Notifications",
+        "messages": "Messages",
         "settings": "Settings",
         "gemini": {
             "title": "Gemini AI",

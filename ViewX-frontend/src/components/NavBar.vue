@@ -45,10 +45,7 @@
       </button>
 
       <!-- Notification Bell -->
-      <button class="relative p-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors active:scale-90 click-spring">
-        <Bell class="w-5 h-5" />
-        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-[var(--bg)] shadow-sm"></span>
-      </button>
+      <NotificationBell v-if="isLoggedIn" />
       
       <!-- User Profile -->
       <div v-if="isLoggedIn" class="flex items-center">
@@ -102,9 +99,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { Play, Upload } from 'lucide-vue-next'
-import { Search, Bell, Menu, User, Setting, SwitchButton, Management } from '@element-plus/icons-vue'
+import { Search, Menu, User, Setting, SwitchButton, Management } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { userApi, type UserProfileVO } from '@/api'
+import NotificationBell from './NotificationBell.vue'
 
 const props = defineProps<{
   theme: 'light' | 'dark'

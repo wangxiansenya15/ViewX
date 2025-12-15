@@ -170,7 +170,8 @@ watch(() => props.isActive, (active) => {
     fetchInteractionStatus()
   } else {
     pauseVideo()
-    if (videoRef.value) videoRef.value.currentTime = 0
+    // 不重置播放进度,保持用户的观看位置
+    // if (videoRef.value) videoRef.value.currentTime = 0
   }
 })
 
@@ -255,13 +256,18 @@ const playVideo = () => {
     if (!videoRef.value) return
     if (!props.video.videoUrl) return
     
-    videoRef.value.muted = false
-    videoRef.value.play().catch(() => {
+    // 先静音播放,确保视频能播放
+    videoRef.value.muted = true
+    videoRef.value.play()
+      .then(() => {
+        // 播放成功后,立即尝试取消静音
         if (videoRef.value) {
-            videoRef.value.muted = true
-            videoRef.value.play().catch(e => console.error('Play failed', e))
+          videoRef.value.muted = false
         }
-    })
+      })
+      .catch(e => {
+        console.error('Play failed', e)
+      })
     isPlaying.value = true
 }
 

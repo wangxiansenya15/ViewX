@@ -19,8 +19,8 @@ viewx:
 
 # 应用版本配置
 app:
-  version: 0.12.2-dev
-  build-time: 2025-12-2 21:20:25
+  version: 0.12.1-dev
+  build-time: 2025-12-1 21:20:25
 
 # Spring 配置
 spring:

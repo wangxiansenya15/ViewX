@@ -290,6 +290,21 @@ export const interactionApi = {
     // 获取交互状态
     getStatus(videoId: number) {
         return request.get<{ liked: boolean; favorited: boolean }>(`/interactions/status/${videoId}`)
+    },
+
+    // 关注/取消关注用户
+    toggleFollow(userId: number) {
+        return request.post<string>(`/interactions/follow/${userId}`)
+    },
+
+    // 检查是否关注某用户
+    isFollowing(userId: number) {
+        return request.get<boolean>(`/interactions/follow/status/${userId}`)
+    },
+
+    // 获取用户的粉丝数和关注数
+    getFollowStats(userId: number) {
+        return request.get<{ followerCount: number; followingCount: number }>(`/interactions/follow/stats/${userId}`)
     }
 }
 
@@ -411,3 +426,71 @@ export const contentApi = {
 // 导出系统 API
 export { systemApi } from './system'
 export type { SystemVersionInfo } from './system'
+
+// ==================== 通知相关类型 ====================
+
+export type NotificationType =
+    | 'FOLLOW'
+    | 'LIKE_VIDEO'
+    | 'FAVORITE_VIDEO'
+    | 'COMMENT_VIDEO'
+    | 'REPLY_COMMENT'
+    | 'LIKE_COMMENT'
+    | 'VIDEO_APPROVED'
+    | 'VIDEO_REJECTED'
+    | 'SYSTEM_ANNOUNCEMENT'
+
+export interface NotificationVO {
+    id: number
+    notificationType: NotificationType
+    notificationTypeDesc: string
+    senderId?: number
+    senderUsername?: string
+    senderNickname?: string
+    senderAvatar?: string
+    relatedVideoId?: number
+    relatedVideoTitle?: string
+    relatedVideoCover?: string
+    relatedCommentId?: number
+    relatedCommentContent?: string
+    content?: string
+    isRead: boolean
+    createdAt: string
+    timeDesc: string
+}
+
+export interface NotificationQueryDTO {
+    notificationType?: NotificationType
+    unreadOnly?: boolean
+    page?: number
+    pageSize?: number
+}
+
+// ==================== 通知 API ====================
+
+export const notificationApi = {
+    // 获取通知列表
+    getNotifications(params?: NotificationQueryDTO) {
+        return request.get<NotificationVO[]>('/notifications', { params })
+    },
+
+    // 获取未读通知数量
+    getUnreadCount() {
+        return request.get<number>('/notifications/unread-count')
+    },
+
+    // 标记通知为已读
+    markAsRead(id: number) {
+        return request.put<string>(`/notifications/${id}/read`)
+    },
+
+    // 标记所有通知为已读
+    markAllAsRead() {
+        return request.put<string>('/notifications/read-all')
+    },
+
+    // 删除通知
+    deleteNotification(id: number) {
+        return request.delete<string>(`/notifications/${id}`)
+    }
+}

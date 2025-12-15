@@ -2,7 +2,7 @@
   <div class="h-full w-full">
     <!-- Mobile Feed -->
     <div v-if="isMobile" class="absolute inset-0 z-0 bg-black">
-      <MobileFeed :videos="feedVideos" @open-comments="openComments" @load-more="handleLoadMore" />
+      <MobileFeed ref="mobileFeedRef" :videos="feedVideos" @open-comments="openComments" @load-more="handleLoadMore" />
     </div>
 
     <!-- Desktop View -->
@@ -21,17 +21,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, inject, type Ref } from 'vue'
+import { ref, onMounted, onActivated, onDeactivated, inject, type Ref } from 'vue'
 import { videoApi, type VideoVO } from '@/api'
 import MobileFeed from '@/components/mobile/MobileFeed.vue'
 import VideoMasonry from '@/components/VideoMasonry.vue'
 import DesktopFeed from '@/components/desktop/DesktopFeed.vue'
 import { useHomeViewMode } from '@/composables/useHomeViewMode'
 
+// 定义组件名称,用于 keep-alive
+defineOptions({
+  name: 'home'
+})
+
 // Inject provided keys from App.vue
 const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
 const openCommentsAction = inject<(v: VideoVO) => void>('openComments')
 const openDesktopVideoAction = inject<(v: VideoVO) => void>('openDesktopVideo')
+
+// MobileFeed ref
+const mobileFeedRef = ref<InstanceType<typeof MobileFeed> | null>(null)
 
 // View Mode
 const { viewMode } = useHomeViewMode()
@@ -162,5 +170,32 @@ const openDesktopVideo = (video: VideoVO) => {
 
 onMounted(() => {
   fetchVideos()
+})
+
+// Keep-alive 生命周期钩子
+onActivated(() => {
+  console.log('🟢🟢🟢 [HomeView] Component ACTIVATED 🟢🟢🟢')
+  // 恢复 MobileFeed 的滚动位置
+  if (mobileFeedRef.value && isMobile.value) {
+    console.log('🟢 [HomeView] Calling restoreScrollPosition in 50ms...')
+    // 使用 nextTick 确保 DOM 已更新,然后添加小延迟确保滚动容器已渲染
+    setTimeout(() => {
+      console.log('🟢 [HomeView] Now calling restoreScrollPosition')
+      mobileFeedRef.value?.restoreScrollPosition()
+    }, 50)
+  } else {
+    console.warn('🟢 [HomeView] Cannot restore - mobileFeedRef:', !!mobileFeedRef.value, 'isMobile:', isMobile.value)
+  }
+})
+
+onDeactivated(() => {
+  console.log('🔴🔴🔴 [HomeView] Component DEACTIVATED 🔴🔴🔴')
+  // 保存 MobileFeed 的滚动位置
+  if (mobileFeedRef.value && isMobile.value) {
+    console.log('🔴 [HomeView] Calling saveScrollPosition')
+    mobileFeedRef.value.saveScrollPosition()
+  } else {
+    console.warn('🔴 [HomeView] Cannot save - mobileFeedRef:', !!mobileFeedRef.value, 'isMobile:', isMobile.value)
+  }
 })
 </script>

@@ -115,15 +115,15 @@
               <!-- Stats -->
               <div class="flex items-center gap-8 mt-8 border-t border-gray-500/20 pt-6 justify-center md:justify-start">
                 <div class="text-center md:text-left">
-                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followingCount || 870) }}</span>
+                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followingCount || 0) }}</span>
                   <span class="text-sm text-gray-500">关注</span>
                 </div>
                 <div class="text-center md:text-left">
-                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followersCount || 103) }}</span>
+                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followersCount || 0) }}</span>
                   <span class="text-sm text-gray-500">粉丝</span>
                 </div>
                 <div class="text-center md:text-left">
-                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.likeCount || 293) }}</span>
+                  <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.likeCount || 0) }}</span>
                   <span class="text-sm text-gray-500">获赞</span>
                 </div>
               </div>
@@ -270,10 +270,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, defineComponent, reactive } from 'vue'
-import { userApi, videoApi, type UserProfileVO, type VideoVO } from '@/api'
+import { userApi, videoApi, interactionApi, type UserProfileVO, type VideoVO } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { Grid, Heart, Bookmark, History, Lock, Trash, Edit2 } from 'lucide-vue-next'
 import VideoCard from '@/components/VideoCard.vue'
+
+// 定义组件名称,用于 keep-alive
+defineOptions({
+  name: 'profile'
+})
 
 // Script
 const emit = defineEmits(['open-video'])
@@ -364,9 +369,21 @@ const fetchProfile = async () => {
     // Update tab counts if available
     tabs[0].count = profile.value?.videoCount
 
+    // 获取关注统计数据
+    if (profile.value?.userId) {
+      try {
+        const stats = await interactionApi.getFollowStats(profile.value.userId)
+        // 将统计数据更新到 profile 中
+        profile.value.followingCount = stats.followingCount
+        profile.value.followersCount = stats.followerCount
+      } catch (err) {
+        console.error('Failed to fetch follow stats:', err)
+      }
+    }
+
   } catch (err) {
     console.error('Failed to fetch profile:', err)
-    error.value = '获取个人信息失败，请稍后重试'
+    error.value = '获取个人信息失败,请稍后重试'
   } finally {
     loading.value = false
   }

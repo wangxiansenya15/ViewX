@@ -1,4 +1,4 @@
-package com.flowbrain.viewx.common;
+package com.flowbrain.viewx.common.enums;
 
 // 存储类型枚举
 public enum StorageType {

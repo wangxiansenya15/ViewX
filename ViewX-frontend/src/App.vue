@@ -17,10 +17,24 @@
 
        <!-- Main Content -->
        <div class="h-full w-full relative overflow-y-auto no-scrollbar scroll-smooth">
-         <router-view v-slot="{ Component }">
+         <router-view v-slot="{ Component, route }">
             <keep-alive>
-               <component :is="Component" :theme="theme" :isLoggedIn="isLoggedIn" @toggle-theme="toggleTheme" />
+               <component 
+                 :is="Component" 
+                 :key="route.meta.keepAlive ? undefined : route.fullPath"
+                 :theme="theme" 
+                 :isLoggedIn="isLoggedIn" 
+                 @toggle-theme="toggleTheme" 
+                 v-if="route.meta.keepAlive"
+               />
             </keep-alive>
+            <component 
+              :is="Component" 
+              :theme="theme" 
+              :isLoggedIn="isLoggedIn" 
+              @toggle-theme="toggleTheme" 
+              v-if="!route.meta.keepAlive"
+            />
          </router-view>
        </div>
 

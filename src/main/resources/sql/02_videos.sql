@@ -22,7 +22,7 @@ CREATE TABLE vx_videos (
 
 
     -- 内容分类
-                        category VARCHAR(50) DEFAULT '其他',
+                        category VARCHAR(50) DEFAULT '其他', -- 可选字段,默认为"其他"
                         subcategory VARCHAR(50),
                         tags VARCHAR(100)[],
 

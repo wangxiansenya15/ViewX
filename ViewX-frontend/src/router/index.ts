@@ -10,17 +10,32 @@ const router = createRouter({
         {
             path: '/',
             name: 'home',
-            component: HomeView
+            component: HomeView,
+            meta: { keepAlive: true }
         },
         {
             path: '/search',
             name: 'search',
-            component: MobileSearch
+            component: MobileSearch,
+            meta: { keepAlive: true }
         },
         {
             path: '/profile',
             name: 'profile',
-            component: ProfileView
+            component: ProfileView,
+            meta: { keepAlive: true }
+        },
+        {
+            path: '/notifications',
+            name: 'notifications',
+            component: () => import('../views/Notifications.vue'),
+            meta: { keepAlive: true }
+        },
+        {
+            path: '/messages',
+            name: 'messages',
+            component: () => import('../views/Messages.vue'),
+            meta: { keepAlive: true }
         },
         {
             path: '/upload',

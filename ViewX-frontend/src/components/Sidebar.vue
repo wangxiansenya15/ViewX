@@ -3,7 +3,7 @@
     class="w-20 lg:w-64 hidden md:flex flex-col glass-panel border-t-0 border-b-0 border-r border-[var(--border)] pt-6 pb-6 gap-6 z-20 h-full">
 
     <nav class="flex flex-col px-3 gap-1">
-      <a v-for="item in navItems" :key="item.id" @click="activeTab = item.id; $emit('change-tab', item.id)"
+      <a v-for="item in navItems" :key="item.id" @click="handleNavClick(item)"
         :class="['flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer group mb-1', 
             activeTab === item.id ? 'bg-[var(--primary)] text-white font-medium shadow-lg' : 'text-[var(--muted)] hover:bg-[var(--bg)] hover:text-[var(--text)]']">
         <component :is="item.iconComponent"
@@ -55,13 +55,14 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { Home, Flame, Users, Library, Sparkles, Settings, User, LayoutGrid, Smartphone } from 'lucide-vue-next'
+import { useRoute, useRouter } from 'vue-router'
+import { Home, Flame, Users, Library, Sparkles, Settings, User, LayoutGrid, Smartphone, Bell, MessageCircle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { useHomeViewMode } from '@/composables/useHomeViewMode'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const activeTab = ref('home')
 const { viewMode, toggleViewMode } = useHomeViewMode()
 
@@ -71,7 +72,16 @@ const navItems = [
   { id: 'subs', nameKey: 'sidebar.subs', iconComponent: Users, path: '/subscriptions' },
   { id: 'library', nameKey: 'sidebar.library', iconComponent: Library, path: '/library' },
   { id: 'profile', nameKey: 'sidebar.me', iconComponent: User, path: '/profile' },
+  { id: 'notifications', nameKey: 'sidebar.notifications', iconComponent: Bell, path: '/notifications' },
+  { id: 'messages', nameKey: 'sidebar.messages', iconComponent: MessageCircle, path: '/messages' },
 ]
+
+// 处理导航点击
+const handleNavClick = (item: typeof navItems[0]) => {
+  activeTab.value = item.id
+  router.push(item.path)
+  emit('change-tab', item.id)
+}
 
 watch(() => route.path, (newPath) => {
   if (newPath === '/') activeTab.value = 'home'
@@ -79,9 +89,11 @@ watch(() => route.path, (newPath) => {
   else if (newPath.startsWith('/subscriptions')) activeTab.value = 'subs'
   else if (newPath.startsWith('/library')) activeTab.value = 'library'
   else if (newPath.startsWith('/profile')) activeTab.value = 'profile'
+  else if (newPath.startsWith('/notifications')) activeTab.value = 'notifications'
+  else if (newPath.startsWith('/messages')) activeTab.value = 'messages'
   else if (newPath.startsWith('/settings')) activeTab.value = 'settings'
   else activeTab.value = ''
 }, { immediate: true })
 
-defineEmits(['change-tab', 'navigate'])
+const emit = defineEmits(['change-tab', 'navigate'])
 </script>

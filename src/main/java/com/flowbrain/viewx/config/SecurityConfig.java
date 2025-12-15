@@ -1,8 +1,7 @@
 package com.flowbrain.viewx.config;
 
-import com.flowbrain.viewx.common.Role;
+import com.flowbrain.viewx.common.enums.Role;
 import com.flowbrain.viewx.pojo.entity.User;
-import com.flowbrain.viewx.service.TokenService;
 import com.flowbrain.viewx.service.UserService;
 import com.flowbrain.viewx.util.JwtAuthenticationFilter;
 import com.flowbrain.viewx.util.JwtUtils;

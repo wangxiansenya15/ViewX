@@ -22,6 +22,10 @@ const currentIndex = ref(0)
 const loadMoreTriggered = ref(false)
 let scrollTimeout: any = null
 
+// 保存滚动位置
+let savedScrollTop = 0
+let savedCurrentIndex = 0
+
 const handleScroll = () => {
   if (!containerRef.value) return
   
@@ -31,6 +35,10 @@ const handleScroll = () => {
     const scrollTop = containerRef.value!.scrollTop
     const clientHeight = containerRef.value!.clientHeight
     const index = Math.round(scrollTop / clientHeight)
+    
+    // 实时保存滚动位置 - 这样即使组件被 deactivated 也能保存正确的值
+    savedScrollTop = scrollTop
+    savedCurrentIndex = index
     
     console.log('[MobileFeed] Scroll - index:', index, 'currentIndex:', currentIndex.value, 'totalVideos:', props.videos.length)
     
@@ -81,6 +89,57 @@ const preloadNextVideos = () => {
 // Watch current index to preload next videos
 watch(currentIndex, () => {
   preloadNextVideos()
+})
+
+// 暴露方法给父组件
+const saveScrollPosition = () => {
+  // 滚动位置已经在 handleScroll 中实时保存了,这里只是记录日志
+  console.log('🔴 [MobileFeed] saveScrollPosition called - already saved in handleScroll - scrollTop:', savedScrollTop, 'index:', savedCurrentIndex)
+}
+
+const restoreScrollPosition = () => {
+  console.log('🟢 [MobileFeed] RESTORING - savedScrollTop:', savedScrollTop, 'savedIndex:', savedCurrentIndex)
+  
+  if (!containerRef.value) {
+    console.warn('🟢 [MobileFeed] Cannot restore - containerRef is null')
+    return
+  }
+  
+  console.log('🟢 [MobileFeed] Container found, current scrollTop:', containerRef.value.scrollTop)
+  
+  // 临时移除 scroll-smooth 类,避免滚动动画
+  const container = containerRef.value
+  const hadSmoothScroll = container.classList.contains('scroll-smooth')
+  
+  if (hadSmoothScroll) {
+    container.classList.remove('scroll-smooth')
+    console.log('🟢 [MobileFeed] Removed scroll-smooth for instant jump')
+  }
+  
+  // 使用 requestAnimationFrame 确保在下一帧渲染时执行
+  requestAnimationFrame(() => {
+    if (containerRef.value) {
+      console.log('🟢 [MobileFeed] Setting scrollTop from', containerRef.value.scrollTop, 'to', savedScrollTop)
+      containerRef.value.scrollTop = savedScrollTop
+      currentIndex.value = savedCurrentIndex
+      console.log('🟢 [MobileFeed] RESTORED - actual scrollTop:', containerRef.value.scrollTop, 'currentIndex:', currentIndex.value)
+      
+      // 恢复 scroll-smooth 类
+      if (hadSmoothScroll) {
+        setTimeout(() => {
+          if (containerRef.value) {
+            containerRef.value.classList.add('scroll-smooth')
+            console.log('🟢 [MobileFeed] Restored scroll-smooth')
+          }
+        }, 100)
+      }
+    }
+  })
+}
+
+defineExpose({
+  saveScrollPosition,
+  restoreScrollPosition
 })
 </script>
 

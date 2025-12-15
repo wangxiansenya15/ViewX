@@ -5,12 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.flowbrain.viewx.dao.UserMapper;
 
 import com.flowbrain.viewx.common.Result;
-import com.flowbrain.viewx.common.UserStatus;
+import com.flowbrain.viewx.common.enums.UserStatus;
 import com.flowbrain.viewx.pojo.entity.User;
-import com.flowbrain.viewx.pojo.entity.UserDetail;
 import com.flowbrain.viewx.util.IdGenerator;
 import com.flowbrain.viewx.util.PageUtils;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

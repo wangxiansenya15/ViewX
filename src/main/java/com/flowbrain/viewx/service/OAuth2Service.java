@@ -1,7 +1,7 @@
 package com.flowbrain.viewx.service;
 
 import com.flowbrain.viewx.common.Result;
-import com.flowbrain.viewx.common.Role;
+import com.flowbrain.viewx.common.enums.Role;
 import com.flowbrain.viewx.dao.SocialUserMapper;
 import com.flowbrain.viewx.dao.UserMapper;
 import com.flowbrain.viewx.pojo.dto.UserDTO;

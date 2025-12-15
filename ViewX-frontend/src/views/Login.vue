@@ -173,9 +173,11 @@ const particleCanvas = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
 let animationFrameId: number
 const particles: Particle[] = []
-const PARTICLE_COUNT = 80
-const CONNECTION_DISTANCE = 150
-const MOUSE_DISTANCE = 200
+
+// 性能优化:减少粒子数量和连接距离
+const PARTICLE_COUNT = 30 // 从80降低到30
+const CONNECTION_DISTANCE = 120 // 从150降低到120
+const MOUSE_DISTANCE = 150 // 从200降低到150
 
 class Particle {
   x: number
@@ -526,7 +528,7 @@ const handleGithubLogin = () => {
 .blob-item {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px); // 单独模糊
+  filter: blur(40px); // 从60px降低到40px,提升性能
   mix-blend-mode: screen;
   opacity: 1; // 确保可见
   animation: float-shape 10s infinite ease-in-out alternate;

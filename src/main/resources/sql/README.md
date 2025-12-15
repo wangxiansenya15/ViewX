@@ -4,57 +4,74 @@
 
 ## 📋 表结构文件列表
 
+**说明**: 所有 SQL 文件已使用数字前缀命名,Docker 初始化时会按文件名字母顺序自动执行。
+
 ### 核心表
-1. **users.sql** - 用户相关表
+1. **01_users.sql** - 用户相关表
    - `vx_users` - 用户主表
    - `vx_user_details` - 用户详情表
 
-2. **videos.sql** - 视频相关表
-   - `vx_videos` - 视频主表
+2. **02_videos.sql** - 视频相关表
+   - `vx_videos` - 视频主表 (已包含 cover_url 字段和可选的 category)
    - `vx_video_analytics` - 视频分析表
 
-3. **interactions.sql** - 互动相关表
+3. **03_contents.sql** - 内容相关表
+   - `vx_contents` - 统一内容表 (视频/图片/图片集)
+
+4. **04_topics.sql** - 话题相关表
+   - `vx_topics` - 话题表
+   - `vx_video_topics` - 视频-话题关联表
+
+5. **05_user_follows.sql** - 用户关注关系表
+   - `vx_user_follows` - 用户关注关系表
+
+6. **06_interactions.sql** - 互动相关表
    - `vx_video_likes` - 视频点赞表
    - `vx_video_favorites` - 视频收藏表
    - `vx_video_comments` - 视频评论表
 
-4. **user_follows.sql** - 用户关注关系表 ⭐ 新增
-   - `vx_user_follows` - 用户关注关系表
-
 ### 扩展表
-5. **oauth2.sql** - OAuth2 认证表
-6. **logs_and_notifications.sql** - 日志和通知表
-7. **ai_extension.sql** - AI 扩展表
-8. **ai_models.sql** - AI 模型配置表
+7. **07_oauth2.sql** - OAuth2 认证表
+8. **08_logs_and_notifications.sql** - 日志和通知表
+9. **09_ai_extension.sql** - AI 扩展表
+10. **10_ai_models.sql** - AI 模型配置表
 
 ## 🚀 执行顺序
 
-**重要**：必须按照以下顺序执行 SQL 文件，因为存在外键依赖关系。
+**重要**：SQL 文件已使用数字前缀命名,Docker 会按字母顺序自动执行,无需手动指定顺序。
+
+如果需要手动执行,请按以下顺序:
 
 ```bash
 # 1. 用户表（基础依赖）
-psql -U your_username -d viewx_db -f users.sql
+psql -U postgres -d viewx_db -f 01_users.sql
 
 # 2. 视频表（依赖用户表）
-psql -U your_username -d viewx_db -f videos.sql
+psql -U postgres -d viewx_db -f 02_videos.sql
 
-# 3. 用户关注表（依赖用户表）⭐ 新增
-psql -U your_username -d viewx_db -f user_follows.sql
+# 3. 内容表（依赖用户表）
+psql -U postgres -d viewx_db -f 03_contents.sql
 
-# 4. 互动表（依赖用户表和视频表）
-psql -U your_username -d viewx_db -f interactions.sql
+# 4. 话题表（依赖视频表）
+psql -U postgres -d viewx_db -f 04_topics.sql
 
-# 5. OAuth2 表（依赖用户表）
-psql -U your_username -d viewx_db -f oauth2.sql
+# 5. 用户关注表（依赖用户表）
+psql -U postgres -d viewx_db -f 05_user_follows.sql
 
-# 6. 日志和通知表（依赖用户表）
-psql -U your_username -d viewx_db -f logs_and_notifications.sql
+# 6. 互动表（依赖用户表和视频表）
+psql -U postgres -d viewx_db -f 06_interactions.sql
 
-# 7. AI 扩展表（依赖视频表）
-psql -U your_username -d viewx_db -f ai_extension.sql
+# 7. OAuth2 表（依赖用户表）
+psql -U postgres -d viewx_db -f 07_oauth2.sql
 
-# 8. AI 模型配置表
-psql -U your_username -d viewx_db -f ai_models.sql
+# 8. 日志和通知表（依赖用户表）
+psql -U postgres -d viewx_db -f 08_logs_and_notifications.sql
+
+# 9. AI 扩展表（依赖视频表和用户表）
+psql -U postgres -d viewx_db -f 09_ai_extension.sql
+
+# 10. AI 模型配置表
+psql -U postgres -d viewx_db -f 10_ai_models.sql
 ```
 
 ## 📊 表关系图
@@ -77,29 +94,42 @@ vx_videos (视频表)
 
 ## 🔧 快速初始化（一键执行）
 
-如果您想一次性执行所有 SQL 文件：
+**Docker 环境**：使用 `docker-compose up -d` 会自动按顺序执行所有 SQL 文件。
+
+**手动初始化**：如果需要手动执行所有 SQL 文件：
 
 ```bash
 #!/bin/bash
 # init_database.sh
 
-DB_USER="your_username"
+DB_USER="postgres"
 DB_NAME="viewx_db"
 SQL_DIR="src/main/resources/sql"
 
 echo "开始初始化数据库..."
 
-# 按顺序执行
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/users.sql
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/videos.sql
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/user_follows.sql
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/interactions.sql
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/oauth2.sql
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/logs_and_notifications.sql
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/ai_extension.sql
-psql -U $DB_USER -d $DB_NAME -f $SQL_DIR/ai_models.sql
+# 按数字前缀顺序自动执行
+for sql_file in $SQL_DIR/*.sql; do
+    echo "执行: $sql_file"
+    psql -U $DB_USER -d $DB_NAME -f "$sql_file"
+done
 
 echo "数据库初始化完成！"
+```
+
+或者手动按顺序执行:
+
+```bash
+psql -U postgres -d viewx_db -f src/main/resources/sql/01_users.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/02_videos.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/03_contents.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/04_topics.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/05_user_follows.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/06_interactions.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/07_oauth2.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/08_logs_and_notifications.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/09_ai_extension.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/10_ai_models.sql
 ```
 
 ## ⚠️ 注意事项

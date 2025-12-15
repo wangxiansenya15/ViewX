@@ -1,6 +1,6 @@
 package com.flowbrain.viewx.pojo.dto;
 
-import com.flowbrain.viewx.common.UserStatus;
+import com.flowbrain.viewx.common.enums.UserStatus;
 import lombok.Data;
 import java.util.List;
 

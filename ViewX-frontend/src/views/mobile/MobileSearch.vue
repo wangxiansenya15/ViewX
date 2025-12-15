@@ -64,7 +64,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ArrowLeft, Search, X, Trash2, Flame } from 'lucide-vue-next'
-// import { useRouter } from 'vue-router'
+
+// 定义组件名称,用于 keep-alive
+defineOptions({
+  name: 'search'
+})
 
 // const router = useRouter() - unused
 const query = ref('')

@@ -2,9 +2,9 @@ package com.flowbrain.viewx.service;
 
 import com.flowbrain.viewx.common.RedisKeyConstants;
 import com.flowbrain.viewx.common.Result;
-import com.flowbrain.viewx.common.Role;
+import com.flowbrain.viewx.common.enums.Role;
 import com.flowbrain.viewx.pojo.dto.UserDTO;
-import com.flowbrain.viewx.common.UserStatus;
+import com.flowbrain.viewx.common.enums.UserStatus;
 import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.util.JwtUtils;
 import lombok.extern.slf4j.Slf4j;

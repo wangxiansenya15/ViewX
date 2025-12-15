@@ -2,7 +2,7 @@ package com.flowbrain.viewx.controller;
 
 
 import com.flowbrain.viewx.common.Result;
-import com.flowbrain.viewx.common.UserStatus;
+import com.flowbrain.viewx.common.enums.UserStatus;
 import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.service.UserService;
 import lombok.extern.slf4j.Slf4j;

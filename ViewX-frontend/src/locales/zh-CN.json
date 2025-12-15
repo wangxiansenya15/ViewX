@@ -26,6 +26,8 @@
         "subs": "订阅",
         "library": "媒体库",
         "me": "我的",
+        "notifications": "通知中心",
+        "messages": "消息",
         "settings": "设置",
         "gemini": {
             "title": "Gemini AI",
