@@ -56,7 +56,7 @@ public class FavoriteController {
     public Result<?> addToFavorites(@RequestBody Map<String, Integer> requestBody) {
         User user = getCurrentUser();
         if (user == null) {
-            return Result.error(Result.BAD_REQUEST, "您还未登录，请先登录");
+            return Result.badRequest("您还未登录，请先登录");
         }
 
         Integer productId = requestBody.get("productId");
@@ -78,7 +78,7 @@ public class FavoriteController {
     public Result<?> removeFromFavorites(@PathVariable Integer productId) {
         User user = getCurrentUser();
         if (user == null) {
-            return Result.error(Result.BAD_REQUEST, "您还未登录，请先登录");
+            return Result.badRequest("您还未登录，请先登录");
         }
 
         if (productId == null) {
@@ -98,7 +98,7 @@ public class FavoriteController {
     public Result<?> getFavoritesList() {
         User user = getCurrentUser();
         if (user == null) {
-            return Result.error(Result.BAD_REQUEST, "您还未登录，请先登录");
+            return Result.badRequest("您还未登录，请先登录");
         }
 
         log.info("用户{}请求获取收藏列表", user.getId());
@@ -115,7 +115,7 @@ public class FavoriteController {
     public Result<?> checkFavoriteStatus(@PathVariable Integer productId) {
         User user = getCurrentUser();
         if (user == null) {
-            return Result.error(Result.BAD_REQUEST, "您还未登录，请先登录");
+            return Result.badRequest("您还未登录，请先登录");
         }
 
         if (productId == null) {
@@ -135,7 +135,7 @@ public class FavoriteController {
     public Result<?> clearAllFavorites() {
         User user = getCurrentUser();
         if (user == null) {
-            return Result.error(Result.BAD_REQUEST, "您还未登录，请先登录");
+            return Result.badRequest("您还未登录，请先登录");
         }
 
         log.info("用户{}请求清空收藏夹", user.getId());
@@ -151,7 +151,7 @@ public class FavoriteController {
     public Result<?> getFavoriteCount() {
         User user = getCurrentUser();
         if (user == null) {
-            return Result.error(Result.BAD_REQUEST, "您还未登录，请先登录");
+            return Result.badRequest("您还未登录，请先登录");
         }
 
         log.info("用户{}请求获取收藏总数", user.getId());

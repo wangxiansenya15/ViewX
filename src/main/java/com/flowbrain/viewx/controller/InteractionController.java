@@ -4,6 +4,7 @@ import com.flowbrain.viewx.common.Result;
 import com.flowbrain.viewx.pojo.dto.CommentCreateDTO;
 import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.pojo.vo.CommentVO;
+import com.flowbrain.viewx.pojo.vo.UserSummaryVO;
 import com.flowbrain.viewx.service.InteractionService;
 import com.flowbrain.viewx.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,8 @@ public class InteractionController {
     @PostMapping("/like/{videoId}")
     public Result<?> likeVideo(@PathVariable Long videoId) {
         Long userId = getCurrentUserId();
-        if (userId == null) return Result.error(401, "请先登录");
+        if (userId == null)
+            return Result.unauthorized("请先登录");
         return interactionService.toggleLike(userId, videoId);
     }
 
@@ -51,7 +53,8 @@ public class InteractionController {
     @PostMapping("/favorite/{videoId}")
     public Result<?> favoriteVideo(@PathVariable Long videoId) {
         Long userId = getCurrentUserId();
-        if (userId == null) return Result.error(401, "请先登录");
+        if (userId == null)
+            return Result.unauthorized("请先登录");
         return interactionService.toggleFavorite(userId, videoId);
     }
 
@@ -78,7 +81,7 @@ public class InteractionController {
     public Result<CommentVO> createComment(@RequestBody CommentCreateDTO dto) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return interactionService.createComment(userId, dto);
     }
@@ -90,7 +93,7 @@ public class InteractionController {
     public Result<String> deleteComment(@PathVariable Long commentId) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return interactionService.deleteComment(userId, commentId);
     }
@@ -114,7 +117,7 @@ public class InteractionController {
     public Result<String> toggleCommentLike(@PathVariable Long commentId) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return interactionService.toggleCommentLike(userId, commentId);
     }
@@ -128,7 +131,7 @@ public class InteractionController {
     public Result<String> toggleFollow(@PathVariable Long userId) {
         Long currentUserId = getCurrentUserId();
         if (currentUserId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return interactionService.toggleFollow(currentUserId, userId);
     }
@@ -147,17 +150,81 @@ public class InteractionController {
     }
 
     /**
+     * 获取详细的关注状态（包括相互关注）
+     */
+    @GetMapping("/follow/detailed-status/{userId}")
+    public Result<com.flowbrain.viewx.pojo.vo.FollowStatusVO> getDetailedFollowStatus(@PathVariable Long userId) {
+        Long currentUserId = getCurrentUserId();
+
+        com.flowbrain.viewx.pojo.vo.FollowStatusVO status = new com.flowbrain.viewx.pojo.vo.FollowStatusVO();
+
+        if (currentUserId == null) {
+            status.setIsFollowing(false);
+            status.setIsFollower(false);
+            status.setIsMutual(false);
+            status.setStatusText("关注");
+            return Result.success(status);
+        }
+
+        // 检查当前用户是否关注了目标用户
+        boolean isFollowing = interactionService.isFollowing(currentUserId, userId);
+        // 检查目标用户是否关注了当前用户
+        boolean isFollower = interactionService.isFollowing(userId, currentUserId);
+        // 检查是否相互关注
+        boolean isMutual = isFollowing && isFollower;
+
+        status.setIsFollowing(isFollowing);
+        status.setIsFollower(isFollower);
+        status.setIsMutual(isMutual);
+
+        // 设置状态文本
+        if (isMutual) {
+            status.setStatusText("相互关注");
+        } else if (isFollowing) {
+            status.setStatusText("已关注");
+        } else {
+            status.setStatusText("关注");
+        }
+
+        return Result.success(status);
+    }
+
+    /**
      * 获取用户的粉丝数和关注数
      */
     @GetMapping("/follow/stats/{userId}")
     public Result<Map<String, Long>> getFollowStats(@PathVariable Long userId) {
         long followerCount = interactionService.getFollowerCount(userId);
         long followingCount = interactionService.getFollowingCount(userId);
-        
+
         Map<String, Long> stats = new HashMap<>();
         stats.put("followerCount", followerCount);
         stats.put("followingCount", followingCount);
-        
+
         return Result.success(stats);
+    }
+
+    /**
+     * 获取粉丝列表
+     */
+    @GetMapping("/followers/{userId}")
+    public Result<List<UserSummaryVO>> getFollowers(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Long currentUserId = getCurrentUserId();
+        return interactionService.getFollowers(userId, currentUserId, page, size);
+    }
+
+    /**
+     * 获取关注列表
+     */
+    @GetMapping("/following/{userId}")
+    public Result<List<UserSummaryVO>> getFollowing(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Long currentUserId = getCurrentUserId();
+        return interactionService.getFollowing(userId, currentUserId, page, size);
     }
 }

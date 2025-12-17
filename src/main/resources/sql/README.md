@@ -35,6 +35,10 @@
 8. **08_logs_and_notifications.sql** - 日志和通知表
 9. **09_ai_extension.sql** - AI 扩展表
 10. **10_ai_models.sql** - AI 模型配置表
+11. **11_messages.sql** - 聊天消息表 ⭐ 新增
+    - `vx_messages` - 私信消息表
+    - `vx_conversations` - 会话表
+    - `vx_user_online_status` - 用户在线状态表
 
 ## 🚀 执行顺序
 
@@ -72,6 +76,9 @@ psql -U postgres -d viewx_db -f 09_ai_extension.sql
 
 # 10. AI 模型配置表
 psql -U postgres -d viewx_db -f 10_ai_models.sql
+
+# 11. 聊天消息表（依赖用户表）
+psql -U postgres -d viewx_db -f 11_messages.sql
 ```
 
 ## 📊 表关系图
@@ -130,6 +137,7 @@ psql -U postgres -d viewx_db -f src/main/resources/sql/07_oauth2.sql
 psql -U postgres -d viewx_db -f src/main/resources/sql/08_logs_and_notifications.sql
 psql -U postgres -d viewx_db -f src/main/resources/sql/09_ai_extension.sql
 psql -U postgres -d viewx_db -f src/main/resources/sql/10_ai_models.sql
+psql -U postgres -d viewx_db -f src/main/resources/sql/11_messages.sql
 ```
 
 ## ⚠️ 注意事项

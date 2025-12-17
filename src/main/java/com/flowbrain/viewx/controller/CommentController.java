@@ -36,7 +36,7 @@ public class CommentController {
     @PostMapping("/{videoId}")
     public Result<?> addComment(@PathVariable Long videoId, @RequestBody Map<String, Object> payload) {
         Long userId = getCurrentUserId();
-        if (userId == null) return Result.error(401, "Unauthorized");
+        if (userId == null) return Result.unauthorized("Unauthorized");
         
         String content = (String) payload.get("content");
         Long parentId = payload.containsKey("parentId") ? ((Number) payload.get("parentId")).longValue() : null;

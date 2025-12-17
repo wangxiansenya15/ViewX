@@ -2,8 +2,10 @@ package com.flowbrain.viewx.common;
 
 import cn.hutool.http.HttpStatus;
 import lombok.Data;
+
 /**
  * 通用结果对象
+ * 
  * @param <T> 数据泛型
  *
  * @author: arthur wang
@@ -59,19 +61,21 @@ public final class Result<T> {
 
     /**
      * 成功方法，自定义状态码和消息
-     * @param <T> 泛型类型
+     * 
+     * @param <T>     泛型类型
      *
-     *           @param message 自定义消息
+     * @param message 自定义消息
      * @return 成功的结果对象
      */
     public static <T> Result<T> success(String message) {
-        return new Result<>(OK, message,null);
+        return new Result<>(OK, message, null);
     }
 
     /**
      * 成功方法，返回200状态码和消息，自定义数据
-     * @param <T> 泛型类型
-     *                @param data 自定义数据
+     * 
+     * @param <T>  泛型类型
+     * @param data 自定义数据
      * @return 默认成功结果对象
      */
     public static <T> Result<T> success(T data) {
@@ -80,9 +84,10 @@ public final class Result<T> {
 
     /**
      * 成功方法，返回200状态码，自定义消息和数据
-     * @param <T> 泛型类型
-     *                @param message 自定义消息
-     *                @param data 自定义数据
+     * 
+     * @param <T>     泛型类型
+     * @param message 自定义消息
+     * @param data    自定义数据
      * @return 默认成功结果对象
      */
     public static <T> Result<T> success(String message, T data) {
@@ -100,53 +105,60 @@ public final class Result<T> {
 
     /**
      * 失败方法，自定义状态码和消息
-     * @param <T> 泛型类型
-     *           @param code 自定义状态码
-     *           @param message 自定义消息
+     * 
+     * @param <T>     泛型类型
+     * @param code    自定义状态码
+     * @param message 自定义消息
      * @return 失败的结果对象
      */
     public static <T> Result<T> error(int code, String message) {
         return new Result<>(code, message, null);
     }
 
-    public static <T> Result<T> ServerError(String message) {
-        return error(SERVER_ERROR, message);
-    }
-
     // ------------ 快捷方法 ------------
 
-    /**  快捷失败方法 返回400状态码  错误请求
+    /**
+     * 快捷失败方法 返回400状态码 错误请求
+     * 
      * @param message 错误信息
      */
-    public static Result<Void> badRequest(String message) {
+    public static <T> Result<T> badRequest(String message) {
         return error(BAD_REQUEST, message);
     }
 
-    /**  快捷失败方法 返回401状态码  未授权
+    /**
+     * 快捷失败方法 返回401状态码 未授权
+     * 
      * @param message 错误信息
      */
-    public static Result<Void> unauthorized(String message) {
+    public static <T> Result<T> unauthorized(String message) {
         return error(UNAUTHORIZED, message);
     }
 
-    /** 快捷失败方法 返回403状态码  拒绝访问
+    /**
+     * 快捷失败方法 返回403状态码 拒绝访问
+     * 
      * @param message 错误信息
      */
-    public static Result<Void> forbidden(String message) {
+    public static <T> Result<T> forbidden(String message) {
         return error(FORBIDDEN, message);
     }
 
-    /**  快捷失败方法 返回404状态码  未找到资源
+    /**
+     * 快捷失败方法 返回404状态码 未找到资源
+     * 
      * @param message 错误信息
      */
-    public static Result<Void> notFound(String message) {
+    public static <T> Result<T> notFound(String message) {
         return error(NOT_FOUND, message);
     }
 
-    /**  快捷失败方法 返回500状态码  服务器内部错误
+    /**
+     * 快捷失败方法 返回500状态码 服务器内部错误
+     * 
      * @param message 错误信息
      */
-    public static Result<Void> serverError(String message) {
+    public static <T> Result<T> serverError(String message) {
         return error(SERVER_ERROR, message);
     }
 
@@ -154,6 +166,7 @@ public final class Result<T> {
 
     /**
      * 链式方法，设置状态码
+     * 
      * @param code 状态码
      * @return 当前结果对象
      */
@@ -164,6 +177,7 @@ public final class Result<T> {
 
     /**
      * 链式方法，设置消息
+     * 
      * @param message 消息内容
      * @return 当前结果对象
      */
@@ -174,6 +188,7 @@ public final class Result<T> {
 
     /**
      * 链式方法，设置数据
+     * 
      * @param data 数据内容
      * @return 当前结果对象
      */

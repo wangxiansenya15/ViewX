@@ -32,6 +32,8 @@ public class ProfileService {
     @Autowired
     private UserDetailMapper userDetailMapper;
 
+    @Autowired
+    private VideoService videoService;
 
     /**
      * 获取用户资料
@@ -50,7 +52,7 @@ public class ProfileService {
                 // 尝试使用 MyBatis-Plus 的 selectById 再次查询
                 user = userMapper.selectById(userId);
                 if (user == null) {
-                    return Result.error(404, "用户不存在");
+                    return Result.notFound("用户不存在");
                 }
             }
 
@@ -69,13 +71,21 @@ public class ProfileService {
             vo.setFollowersCount(profileMapper.countFollowers(userId));
             vo.setFollowingCount(profileMapper.countFollowing(userId));
             vo.setVideoCount(profileMapper.countVideos(userId));
+            vo.setLikeCount(profileMapper.countTotalLikes(userId));
+
+            // 5. 获取用户的视频列表
+            Result<java.util.List<com.flowbrain.viewx.pojo.entity.Video>> videosResult = videoService
+                    .getMyVideos(userId);
+            if (videosResult.getCode() == Result.OK && videosResult.getData() != null) {
+                vo.setVideos(videosResult.getData());
+            }
 
             log.info("获取用户资料成功，用户ID: {}", userId);
             return Result.success(vo);
 
         } catch (Exception e) {
             log.error("获取用户资料失败，用户ID: {}", userId, e);
-            return Result.error(500, "获取用户资料失败");
+            return Result.serverError("获取用户资料失败");
         }
     }
 
@@ -94,7 +104,7 @@ public class ProfileService {
             // 1. 验证用户是否存在
             User existingUser = userMapper.selectById(userId);
             if (existingUser == null) {
-                return Result.error(404, "用户不存在");
+                return Result.notFound("用户不存在");
             }
 
             // 2. 权限检查：只有用户本人、管理员或超级管理员可以修改
@@ -103,7 +113,7 @@ public class ProfileService {
 
             if (!isOwner && !isAdmin) {
                 log.warn("权限不足：用户 {} (角色: {}) 尝试修改用户 {} 的资料", currentUserId, currentUserRole, userId);
-                return Result.error(403, "权限不足：只有用户本人、管理员或超级管理员可以修改用户资料");
+                return Result.forbidden("权限不足：只有用户本人、管理员或超级管理员可以修改用户资料");
             }
 
             // 3. 更新 User 表
@@ -127,7 +137,7 @@ public class ProfileService {
 
         } catch (Exception e) {
             log.error("更新用户资料失败，用户ID: {}", userId, e);
-            return Result.error(500, "更新用户资料失败");
+            return Result.serverError("更新用户资料失败");
         }
     }
 

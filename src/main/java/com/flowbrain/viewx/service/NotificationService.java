@@ -77,8 +77,8 @@ public class NotificationService {
 
             return Result.success(notifications);
         } catch (Exception e) {
-            log.error("Failed to get notifications", e);
-            return Result.error(500, "获取通知列表失败");
+            log.error("获取通知列表失败", e);
+            return Result.serverError("获取通知列表失败");
         }
     }
 
@@ -90,8 +90,8 @@ public class NotificationService {
             Long count = notificationMapper.countUnread(userId);
             return Result.success(count);
         } catch (Exception e) {
-            log.error("Failed to get unread count", e);
-            return Result.error(500, "获取未读数量失败");
+            log.error("获取未读数量失败", e);
+            return Result.serverError("获取未读数量失败");
         }
     }
 
@@ -110,11 +110,11 @@ public class NotificationService {
             if (updated > 0) {
                 return Result.success("标记成功");
             } else {
-                return Result.error(404, "通知不存在");
+                return Result.notFound("通知不存在");
             }
         } catch (Exception e) {
-            log.error("Failed to mark as read", e);
-            return Result.error(500, "标记失败");
+            log.error("标记失败", e);
+            return Result.serverError("标记失败");
         }
     }
 
@@ -127,8 +127,8 @@ public class NotificationService {
             int updated = notificationMapper.markAllAsRead(userId);
             return Result.success("已标记 " + updated + " 条通知为已读");
         } catch (Exception e) {
-            log.error("Failed to mark all as read", e);
-            return Result.error(500, "标记失败");
+            log.error("标记失败", e);
+            return Result.serverError("标记失败");
         }
     }
 
@@ -144,7 +144,7 @@ public class NotificationService {
 
             Notification notification = notificationMapper.selectOne(queryWrapper);
             if (notification == null) {
-                return Result.error(404, "通知不存在");
+                return Result.notFound("通知不存在");
             }
 
             // 软删除
@@ -154,8 +154,8 @@ public class NotificationService {
 
             return Result.success("删除成功");
         } catch (Exception e) {
-            log.error("Failed to delete notification", e);
-            return Result.error(500, "删除失败");
+            log.error("删除失败", e);
+            return Result.serverError("删除失败");
         }
     }
 

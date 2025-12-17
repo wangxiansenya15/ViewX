@@ -38,7 +38,8 @@ public class OAuth2Service {
      * 4. Return JWT
      */
     @Transactional
-    public Result<UserDTO> handleLogin(String provider, String providerUserId, String email, String nickname, String avatarUrl) {
+    public Result<UserDTO> handleLogin(String provider, String providerUserId, String email, String nickname,
+            String avatarUrl) {
         log.info("OAuth2 login: {} - {}", provider, providerUserId);
 
         SocialUser socialUser = socialUserMapper.selectByProvider(provider, providerUserId);
@@ -47,7 +48,7 @@ public class OAuth2Service {
         if (socialUser == null) {
             // New User: Auto Register
             log.info("New social user, auto registering...");
-            
+
             // 1. Create Main User
             user = new User();
             user.setId(IdGenerator.nextId());
@@ -57,7 +58,7 @@ public class OAuth2Service {
             user.setEmail(email != null ? email : username + "@placeholder.com"); // Handle missing email
             user.setPassword("OAUTH2_NO_PASSWORD"); // Placeholder
             user.setRole(Role.USER);
-            
+
             userMapper.insertUser(user);
             userMapper.insertUserDetail(user.getId());
 
@@ -70,21 +71,24 @@ public class OAuth2Service {
             socialUser.setNickname(nickname);
             socialUser.setAvatarUrl(avatarUrl);
             socialUser.setEmail(email);
-            
+
             socialUserMapper.insert(socialUser);
         } else {
             // Existing User
             user = userMapper.selectUserById(socialUser.getUserId());
             if (user == null) {
-                return Result.error(500, "Linked user not found");
+                log.error("OAuth2 linked user not found for provider: {}, providerUserId: {}", provider,
+                        providerUserId);
+                return Result.serverError("Linked user not found");
             }
         }
 
         // Generate Token
         String token = jwtUtils.generateAndStoreToken(user.getUsername());
-        
+
         // Return DTO
-        UserDTO userDTO = new UserDTO(user.getId(), token, user.getUsername(), List.of(user.getRole().name()), user.getStatus());
+        UserDTO userDTO = new UserDTO(user.getId(), token, user.getUsername(), List.of(user.getRole().name()),
+                user.getStatus());
         return Result.success("Login successful", userDTO);
     }
 }

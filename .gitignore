@@ -48,3 +48,4 @@ uploads
 .DS_Store
 Thumbs.db
 .env
+.agent

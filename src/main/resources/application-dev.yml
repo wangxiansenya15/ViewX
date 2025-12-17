@@ -109,7 +109,7 @@ file:
     upload-dir: ${FILE_STORAGE_UPLOAD_DIR}
     local:
       domain: ${FILE_STORAGE_LOCAL_DOMAIN}
-      # upload-dir: /home/arthur/Desktop/FinalStage/ViewX/uploads
+      # upload-dir: ../uploads
 
 # 日志配置 - 开发环境（详细日志）
 logging:

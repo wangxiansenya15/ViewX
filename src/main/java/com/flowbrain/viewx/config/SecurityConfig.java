@@ -62,21 +62,39 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-                                "/recommend/**")
+                                "/recommend/**",
+                                "/users/search")
+
                         .permitAll()
                         // 允许匿名访问视频详情和交互状态
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/videos/**", "/interactions/**")
                         .permitAll()
+                        // 允许访问用户公开资料（查看其他用户）
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/user/profile/*")
+                        .permitAll()
                         // 角色权限控制
                         .requestMatchers("/comments/**", "/user/**", "/avatar/**", "/payment/**", "/msg/**",
-                                "/videos/**", "/interactions/**")
+                                "/videos/**", "/interactions/**", "/notifications/**", "/messages/**", "/ws/**")
                         .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
                         .requestMatchers("/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         // 其他请求需要认证
                         .anyRequest().authenticated())
                 // 异常处理
                 .exceptionHandling(e -> e
-                        .accessDeniedPage("/403"))
+                        // 自定义 AccessDeniedHandler，返回 JSON 而不是转发到 /403
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(403);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"code\":403,\"message\":\"权限不足，拒绝访问\",\"data\":null}");
+                        })
+                        // 自定义 AuthenticationEntryPoint，返回 JSON 而不是重定向到登录页
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(401);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"code\":401,\"message\":\"未授权，请先登录\",\"data\":null}");
+                        }))
                 // 禁用CSRF（适用于REST API场景）
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -121,10 +139,14 @@ public class SecurityConfig {
 
     /**
      * BCrypt密码编码器
+     * 强度说明：
+     * - 10: ~150ms，生产环境推荐，安全性高
+     * - 12: ~600ms，极高安全性，但影响用户体验
+     * - 4-8: 仅用于开发/测试环境
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        return new BCryptPasswordEncoder(10);
     }
 
     /**

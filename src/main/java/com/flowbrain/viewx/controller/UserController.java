@@ -1,6 +1,5 @@
 package com.flowbrain.viewx.controller;
 
-
 import com.flowbrain.viewx.common.Result;
 import com.flowbrain.viewx.common.enums.UserStatus;
 import com.flowbrain.viewx.pojo.entity.User;
@@ -46,20 +45,17 @@ public class UserController {
         return userService.updateUser(user);
     }
 
-    
     // 获取所有用户（GET /users）
 
     public Result<List<User>> getAllUsers() {
         return Result.success(userService.getAllUsers());
     }
 
-
     @GetMapping
     public Result<?> list(@RequestParam(defaultValue = "1") int page,
-                       @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size) {
         return userService.getUserList(page, size);
     }
-
 
     // 获取单个用户（GET /users/{id}）
     @GetMapping("/{id}")
@@ -72,7 +68,7 @@ public class UserController {
     public Result<?> updateUserStatus(@PathVariable Long id, @RequestBody Map<String, Object> statusData) {
         // 从请求体中获取状态信息
         log.info("接收到用户状态更新请求，用户ID: {}, 状态数据: {}", id, statusData);
-        
+
         // 获取状态值，如果前端直接传了status枚举字符串
         UserStatus status = null;
         if (statusData.containsKey("status") && statusData.get("status") instanceof String) {
@@ -100,7 +96,8 @@ public class UserController {
             if (statusData.containsKey("accountNonLocked") && statusData.get("accountNonLocked") instanceof Boolean) {
                 accountNonLocked = (Boolean) statusData.get("accountNonLocked");
             }
-            if (statusData.containsKey("credentialsNonExpired") && statusData.get("credentialsNonExpired") instanceof Boolean) {
+            if (statusData.containsKey("credentialsNonExpired")
+                    && statusData.get("credentialsNonExpired") instanceof Boolean) {
                 credentialsNonExpired = (Boolean) statusData.get("credentialsNonExpired");
             }
 
@@ -109,5 +106,24 @@ public class UserController {
 
         log.info("解析后的用户状态: {}", status);
         return userService.updateStatus(id, status);
+    }
+
+    /**
+     * 搜索用户（通过用户名或昵称）
+     * GET /users/search?keyword=xxx
+     */
+    @GetMapping("/search")
+    public Result<List<com.flowbrain.viewx.pojo.vo.UserSummaryVO>> searchUsers(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        log.info("搜索用户，关键词: {}, 页码: {}, 大小: {}", keyword, page, size);
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Result.badRequest("搜索关键词不能为空");
+        }
+
+        return userService.searchUsers(keyword.trim(), page, size);
     }
 }

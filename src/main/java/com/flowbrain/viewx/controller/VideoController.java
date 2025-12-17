@@ -64,7 +64,7 @@ public class VideoController {
             @RequestParam(value = "visibility", required = false, defaultValue = "PUBLIC") String visibility) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
 
         // 构建DTO
@@ -89,7 +89,7 @@ public class VideoController {
     public Result<String> updateVideo(@PathVariable Long id, @RequestBody VideoUpdateDTO dto) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return videoService.updateVideo(userId, id, dto);
     }
@@ -102,7 +102,7 @@ public class VideoController {
     public Result<com.flowbrain.viewx.pojo.vo.CoverUploadVO> uploadCover(@RequestParam("file") MultipartFile file) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return videoService.uploadCoverImage(file);
     }
@@ -114,7 +114,7 @@ public class VideoController {
     public Result<String> deleteVideo(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return videoService.deleteVideo(userId, id);
     }
@@ -126,8 +126,18 @@ public class VideoController {
     public Result<java.util.List<com.flowbrain.viewx.pojo.entity.Video>> getMyVideos() {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
+        return videoService.getMyVideos(userId);
+    }
+
+    /**
+     * Get user's videos by userId
+     * 获取指定用户的视频列表（公开）
+     */
+    @GetMapping("/user/{userId}")
+    public Result<java.util.List<com.flowbrain.viewx.pojo.entity.Video>> getUserVideos(@PathVariable Long userId) {
+        log.info("获取用户视频列表，用户ID: {}", userId);
         return videoService.getMyVideos(userId);
     }
 }

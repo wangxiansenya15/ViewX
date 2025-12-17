@@ -39,6 +39,13 @@ spring:
       # 禁用 Observation 以避免 StackOverflowError
       dispatcher-types: request
 
+  # MVC 配置
+  mvc:
+    throw-exception-if-no-handler-found: true  # 找不到处理器时抛出异常
+  web:
+    resources:
+      add-mappings: false  # 禁用默认的静态资源映射，让 404 能被捕获
+
 # 禁用 Spring Actuator 的 Observation（如果启用了 Actuator）
 management:
   observations:
@@ -68,5 +75,5 @@ springdoc:
 
 # JWT 配置
 jwt:
-  secret: fruit-mall-secret-key-for-authentication-256bits
+  secret: flowbrain-viewx-jwt-secret-key-for-authentication-256bits
   expire: 864000  # 10天过期

@@ -52,7 +52,7 @@ public class NotificationController {
     public Result<List<NotificationVO>> getNotifications(NotificationQueryDTO queryDTO) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return notificationService.getNotifications(userId, queryDTO);
     }
@@ -65,7 +65,7 @@ public class NotificationController {
     public Result<Long> getUnreadCount() {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return notificationService.getUnreadCount(userId);
     }
@@ -78,7 +78,7 @@ public class NotificationController {
     public Result<String> markAsRead(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return notificationService.markAsRead(userId, id);
     }
@@ -91,7 +91,7 @@ public class NotificationController {
     public Result<String> markAllAsRead() {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return notificationService.markAllAsRead(userId);
     }
@@ -104,7 +104,7 @@ public class NotificationController {
     public Result<String> deleteNotification(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return notificationService.deleteNotification(userId, id);
     }

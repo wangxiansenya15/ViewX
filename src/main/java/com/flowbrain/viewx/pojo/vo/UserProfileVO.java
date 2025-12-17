@@ -50,4 +50,7 @@ public class UserProfileVO {
     private Integer videoCount; // 视频数
 
     private Integer likeCount; // 获赞数
+
+    // 用户的视频列表（可选，用于个人主页）
+    private java.util.List<com.flowbrain.viewx.pojo.entity.Video> videos;
 }

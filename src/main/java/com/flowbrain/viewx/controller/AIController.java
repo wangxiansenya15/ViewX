@@ -42,7 +42,7 @@ public class AIController {
         List<Double> embedding = aiService.generateEmbedding(query);
         
         if (embedding == null || embedding.isEmpty()) {
-            return Result.error(500, "Failed to generate embedding");
+            return Result.serverError("Failed to generate embedding");
         }
 
         // 2. Convert List<Double> to pgvector string format "[0.1, 0.2, ...]"

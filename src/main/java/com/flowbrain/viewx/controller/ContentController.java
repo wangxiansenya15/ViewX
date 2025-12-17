@@ -57,7 +57,7 @@ public class ContentController {
         
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
 
         ContentUploadDTO dto = new ContentUploadDTO();
@@ -88,7 +88,7 @@ public class ContentController {
         
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
 
         ContentUploadDTO dto = new ContentUploadDTO();
@@ -133,7 +133,7 @@ public class ContentController {
             @RequestParam(value = "type", required = false) String contentType) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return contentService.getUserContents(userId, contentType);
     }
@@ -146,7 +146,7 @@ public class ContentController {
     public Result<String> deleteContent(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         if (userId == null) {
-            return Result.error(401, "请先登录");
+            return Result.unauthorized("请先登录");
         }
         return contentService.deleteContent(userId, id);
     }

@@ -40,13 +40,13 @@ public class AuthController {
 
         // 1. 验证必填字段
         if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
-            return Result.error(Result.BAD_REQUEST, "邮箱不能为空");
+            return Result.badRequest("邮箱不能为空");
         }
 
         // 2. 验证验证码（从 User 对象中获取前端传来的验证码）
         String verificationCode = user.getVerificationCode();
         if (verificationCode == null || verificationCode.trim().isEmpty()) {
-            return Result.error(Result.BAD_REQUEST, "验证码不能为空");
+            return Result.badRequest("验证码不能为空");
         }
 
         // 3. 调用验证码验证服务（验证成功后会自动从Redis删除验证码）
@@ -132,7 +132,7 @@ public class AuthController {
         String token = payload.get("token");
 
         if (token == null || token.isEmpty()) {
-            return Result.error(400, "请求参数错误，Token不能为空！");
+            return Result.badRequest("请求参数错误，Token不能为空！");
         }
 
         try {
@@ -142,11 +142,11 @@ public class AuthController {
             if (isValid) {
                 return Result.success("Token有效");
             } else {
-                return Result.error(401, "Token已失效或过期，请重新登录");
+                return Result.unauthorized("Token已失效或过期，请重新登录");
             }
         } catch (Exception e) {
             log.error("Token验证失败", e);
-            return Result.error(401, "Token验证失败: " + e.getMessage());
+            return Result.unauthorized("Token验证失败: " + e.getMessage());
         }
     }
 

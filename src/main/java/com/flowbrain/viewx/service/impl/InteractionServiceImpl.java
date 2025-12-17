@@ -9,6 +9,7 @@ import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.pojo.entity.UserDetail;
 import com.flowbrain.viewx.pojo.entity.UserFollow;
 import com.flowbrain.viewx.pojo.vo.CommentVO;
+import com.flowbrain.viewx.pojo.vo.UserSummaryVO;
 import com.flowbrain.viewx.service.EventPublisher;
 import com.flowbrain.viewx.service.InteractionService;
 import com.flowbrain.viewx.service.RecommendService;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -130,7 +131,7 @@ public class InteractionServiceImpl implements InteractionService {
             return Result.success(vo);
         } catch (Exception e) {
             log.error("发表评论失败", e);
-            return Result.error(500, "发表评论失败: " + e.getMessage());
+            return Result.serverError("发表评论失败: " + e.getMessage());
         }
     }
 
@@ -140,12 +141,12 @@ public class InteractionServiceImpl implements InteractionService {
         // 查询评论
         VideoComment comment = commentMapper.selectById(commentId);
         if (comment == null) {
-            return Result.error(404, "评论不存在");
+            return Result.notFound("评论不存在");
         }
 
         // 权限检查：只能删除自己的评论
         if (!comment.getUserId().equals(userId)) {
-            return Result.error(403, "无权删除此评论");
+            return Result.forbidden("无权删除此评论");
         }
 
         // 软删除评论
@@ -179,7 +180,7 @@ public class InteractionServiceImpl implements InteractionService {
             return Result.success(vos);
         } catch (Exception e) {
             log.error("获取评论列表失败", e);
-            return Result.error(500, "获取评论列表失败");
+            return Result.serverError("获取评论列表失败");
         }
     }
 
@@ -197,7 +198,7 @@ public class InteractionServiceImpl implements InteractionService {
     public Result<String> toggleFollow(Long followerId, Long followedId) {
         // 防止自己关注自己
         if (followerId.equals(followedId)) {
-            return Result.error(400, "不能关注自己");
+            return Result.badRequest("不能关注自己");
         }
 
         if (followMapper.checkFollow(followerId, followedId) > 0) {
@@ -221,6 +222,13 @@ public class InteractionServiceImpl implements InteractionService {
     }
 
     @Override
+    public boolean isMutualFollow(Long userId1, Long userId2) {
+        // 检查双向关注
+        return followMapper.checkFollow(userId1, userId2) > 0
+                && followMapper.checkFollow(userId2, userId1) > 0;
+    }
+
+    @Override
     public long getFollowerCount(Long userId) {
         return followMapper.getFollowerCount(userId);
     }
@@ -228,6 +236,50 @@ public class InteractionServiceImpl implements InteractionService {
     @Override
     public long getFollowingCount(Long userId) {
         return followMapper.getFollowingCount(userId);
+    }
+
+    @Override
+    public Result<List<UserSummaryVO>> getFollowers(Long userId, Long currentUserId, int page, int size) {
+        int offset = (page - 1) * size;
+        List<UserSummaryVO> list = followMapper.getFollowers(userId, offset, size);
+
+        // 批量获取当前用户关注的所有用户ID（避免N+1查询）
+        java.util.Set<Long> followingIds = new java.util.HashSet<>();
+        if (currentUserId != null) {
+            followingIds.addAll(followMapper.getFollowingUserIds(currentUserId));
+        }
+
+        // Process avatars and follow status
+        for (UserSummaryVO user : list) {
+            if (user.getAvatar() != null && !user.getAvatar().startsWith("http")) {
+                user.setAvatar(storageStrategy.getFileUrl(user.getAvatar()));
+            }
+            // 使用 Set 快速判断，O(1) 时间复杂度
+            user.setIsFollowing(followingIds.contains(user.getId()));
+        }
+        return Result.success(list);
+    }
+
+    @Override
+    public Result<List<UserSummaryVO>> getFollowing(Long userId, Long currentUserId, int page, int size) {
+        int offset = (page - 1) * size;
+        List<UserSummaryVO> list = followMapper.getFollowing(userId, offset, size);
+
+        // 批量获取当前用户关注的所有用户ID（避免N+1查询）
+        java.util.Set<Long> followingIds = new java.util.HashSet<>();
+        if (currentUserId != null) {
+            followingIds.addAll(followMapper.getFollowingUserIds(currentUserId));
+        }
+
+        // Process avatars and follow status
+        for (UserSummaryVO user : list) {
+            if (user.getAvatar() != null && !user.getAvatar().startsWith("http")) {
+                user.setAvatar(storageStrategy.getFileUrl(user.getAvatar()));
+            }
+            // 使用 Set 快速判断，O(1) 时间复杂度
+            user.setIsFollowing(followingIds.contains(user.getId()));
+        }
+        return Result.success(list);
     }
 
     // ==================== 私有辅助方法 ====================

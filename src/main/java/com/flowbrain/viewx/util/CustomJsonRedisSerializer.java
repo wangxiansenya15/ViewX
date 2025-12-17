@@ -29,7 +29,6 @@ public class CustomJsonRedisSerializer<T> implements RedisSerializer<T> {
      * -- GETTER --
      *  获取配置的ObjectMapper实例
      *
-     * @return ObjectMapper实例
      */
     @Getter
     private final ObjectMapper objectMapper;

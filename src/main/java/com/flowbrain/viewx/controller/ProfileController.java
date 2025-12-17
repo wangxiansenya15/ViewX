@@ -113,10 +113,10 @@ public class ProfileController {
 
         } catch (IllegalArgumentException e) {
             log.warn("头像上传失败: {}", e.getMessage());
-            return Result.error(400, e.getMessage());
+            return Result.badRequest(e.getMessage());
         } catch (Exception e) {
             log.error("头像上传失败", e);
-            return Result.error(500, "头像上传失败: " + e.getMessage());
+            return Result.serverError("头像上传失败: " + e.getMessage());
         }
     }
 

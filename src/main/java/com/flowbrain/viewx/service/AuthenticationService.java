@@ -54,14 +54,11 @@ public class AuthenticationService {
             // 获取用户详情（包含角色、头像等）
             User user = userService.getUserByUsername(userDetails.getUsername());
             if (user == null) {
-                log.warn("用户不存在: {}", userDetails.getUsername());
-                return Result.error(Result.BAD_REQUEST, "用户不存在");
+                return Result.badRequest("用户不存在");
             }
 
-            Role role = user.getRole();
-            if (role == null) {
-                log.warn("用户详细信息缺失，用户名: {}", userDetails.getUsername());
-                return Result.error(Result.BAD_REQUEST, "用户详细信息缺失");
+            if (user.getDetails() == null) {
+                return Result.badRequest("用户详细信息缺失");
             }
 
             List<String> roles = userDetails.getAuthorities().stream()
@@ -79,12 +76,11 @@ public class AuthenticationService {
             log.info("登录成功，返回200 OK响应");
             return Result.success("登录成功", responseUserDTO);
 
-        } catch (BadCredentialsException ex) {
-            log.warn("登录失败: 凭证无效 - {}", ex.getMessage());
-            return Result.error(Result.BAD_REQUEST, "凭证无效,用户名或密码错误");
-        } catch (Exception ex) {
-            log.error("登录过程中发生异常: {}", ex.getClass().getName(), ex);
-            return Result.error(Result.SERVER_ERROR, "登录过程中发生异常，请稍后再试");
+        } catch (BadCredentialsException e) {
+            return Result.badRequest("凭证无效,用户名或密码错误");
+        } catch (Exception e) {
+            log.error("登录失败", e);
+            return Result.serverError("登录过程中发生异常，请稍后再试");
         }
     }
 
@@ -100,10 +96,10 @@ public class AuthenticationService {
         try {
             // 参数校验
             if (email == null || email.trim().isEmpty()) {
-                return Result.error(Result.BAD_REQUEST, "邮箱不能为空");
+                return Result.badRequest("邮箱不能为空");
             }
             if (verificationCode == null || verificationCode.trim().isEmpty()) {
-                return Result.error(Result.BAD_REQUEST, "验证码不能为空");
+                return Result.badRequest("验证码不能为空");
             }
 
             // 从Redis中获取存储的验证码
@@ -112,13 +108,13 @@ public class AuthenticationService {
 
             if (storedCode == null) {
                 log.warn("验证码验证失败: Redis中未找到验证码，邮箱: {}", email);
-                return Result.error(Result.BAD_REQUEST, "验证码已过期或不存在，请重新获取");
+                return Result.badRequest("验证码已过期或不存在，请重新获取");
             }
 
             // 验证码比较（忽略大小写和前后空格）
             if (!storedCode.trim().equalsIgnoreCase(verificationCode.trim())) {
                 log.warn("验证码验证失败: 验证码不匹配，邮箱: {}", email);
-                return Result.error(Result.BAD_REQUEST, "验证码错误");
+                return Result.badRequest("验证码错误");
             }
 
             // 验证成功后立即删除验证码，防止重复使用
@@ -129,7 +125,7 @@ public class AuthenticationService {
 
         } catch (Exception ex) {
             log.error("验证码验证过程中发生异常，邮箱: {}", email, ex);
-            return Result.error(Result.SERVER_ERROR, "验证码验证失败，请稍后再试");
+            return Result.serverError("验证码验证失败，请稍后再试");
         }
     }
 
@@ -146,16 +142,16 @@ public class AuthenticationService {
         try {
             // 参数校验
             if (email == null || email.trim().isEmpty()) {
-                return Result.error(Result.BAD_REQUEST, "邮箱不能为空");
+                return Result.badRequest("邮箱不能为空");
             }
             if (verificationCode == null || verificationCode.trim().isEmpty()) {
-                return Result.error(Result.BAD_REQUEST, "验证码不能为空");
+                return Result.badRequest("验证码不能为空");
             }
             if (newPassword == null || newPassword.trim().isEmpty()) {
-                return Result.error(Result.BAD_REQUEST, "新密码不能为空");
+                return Result.badRequest("新密码不能为空");
             }
             if (newPassword.length() < 6 || newPassword.length() > 20) {
-                return Result.error(Result.BAD_REQUEST, "密码长度应为6-20个字符");
+                return Result.badRequest("密码长度应为6-20个字符");
             }
 
             // 首先验证验证码（验证成功后会自动从Redis删除）
@@ -168,7 +164,7 @@ public class AuthenticationService {
             User user = userService.getUserByEmail(email);
             if (user == null) {
                 log.warn("重置密码失败: 用户不存在，邮箱: {}", email);
-                return Result.error(Result.NOT_FOUND, "用户不存在");
+                return Result.notFound("用户不存在");
             }
 
             // 加密新密码
@@ -178,7 +174,7 @@ public class AuthenticationService {
             boolean updateResult = userService.updateUserPassword(user.getId(), encodedPassword);
             if (!updateResult) {
                 log.error("重置密码失败: 数据库更新失败，邮箱: {}", email);
-                return Result.error(Result.SERVER_ERROR, "密码重置失败，请稍后再试");
+                return Result.serverError("密码重置失败，请稍后再试");
             }
 
             log.info("密码重置成功，邮箱: {}", email);
@@ -186,7 +182,7 @@ public class AuthenticationService {
 
         } catch (Exception ex) {
             log.error("重置密码过程中发生异常，邮箱: {}", email, ex);
-            return Result.error(Result.SERVER_ERROR, "密码重置失败，请稍后再试");
+            return Result.serverError("密码重置失败，请稍后再试");
         }
     }
 

@@ -72,4 +72,56 @@ public class RecommendController {
                 size);
         return Result.success(videos);
     }
+
+    /**
+     * Initialize recommendation scores for all approved videos.
+     * This endpoint should be called after deployment or when Redis is cleared.
+     * Requires admin privileges (TODO: add @PreAuthorize).
+     */
+    @GetMapping("/init-scores")
+    public Result<String> initializeScores() {
+        log.info("Manually triggering recommendation score initialization");
+
+        try {
+            if (recommendService instanceof com.flowbrain.viewx.service.impl.RecommendServiceImpl) {
+                ((com.flowbrain.viewx.service.impl.RecommendServiceImpl) recommendService)
+                        .initializeRecommendationScores();
+                return Result.success("Recommendation scores initialized successfully");
+            } else {
+                return Result.serverError("Service implementation does not support initialization");
+            }
+        } catch (Exception e) {
+            log.error("Failed to initialize recommendation scores", e);
+            return Result.serverError("Failed to initialize scores: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 搜索视频（通过标题或描述）
+     * GET /recommend/search?keyword=xxx&page=1&size=20
+     */
+    @GetMapping("/search")
+    public Result<List<com.flowbrain.viewx.pojo.vo.VideoListVO>> searchVideos(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) {
+
+        log.info("搜索视频，关键词: {}, 页码: {}, 大小: {}", keyword, page, size);
+
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Result.badRequest("搜索关键词不能为空");
+        }
+
+        Long userId = null;
+        if (authentication != null) {
+            String username = authentication.getName();
+            User user = userService.getUserByUsername(username);
+            if (user != null) {
+                userId = user.getId();
+            }
+        }
+
+        return recommendService.searchVideos(keyword.trim(), userId, page, size);
+    }
 }

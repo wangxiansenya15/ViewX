@@ -58,7 +58,7 @@ public class SystemVersionController {
         if (success) {
             return Result.success("升级成功", null);
         } else {
-            return Result.error(Result.SERVER_ERROR, "升级失败");
+            return Result.serverError("升级失败");
         }
     }
 

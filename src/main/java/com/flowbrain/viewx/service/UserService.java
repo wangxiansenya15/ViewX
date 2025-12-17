@@ -43,8 +43,9 @@ public class UserService {
         log.info("开始插入用户，用户名: {}, 邮箱: {}", user.getUsername(), user.getEmail());
 
         // 参数验证
-        if (user.getUsername() == null || user.getPassword() == null) {
-            return Result.error(Result.BAD_REQUEST, "用户名或密码不能为空");
+        if (user.getUsername() == null || user.getUsername().isEmpty() || user.getPassword() == null
+                || user.getPassword().isEmpty()) {
+            return Result.badRequest("用户名或密码不能为空");
         }
 
         // 加密密码
@@ -53,7 +54,7 @@ public class UserService {
         // 验证用户名是否已存在
         if (existsByUsername(user.getUsername())) {
             log.warn("用户名已存在: {}", user.getUsername());
-            return Result.error(Result.BAD_REQUEST, "用户名已存在");
+            return Result.badRequest("用户名已存在");
         }
 
         // 验证邮箱是否已被注册
@@ -61,7 +62,7 @@ public class UserService {
             User existingUser = getUserByEmail(user.getEmail());
             if (existingUser != null) {
                 log.warn("邮箱已被注册: {}", user.getEmail());
-                return Result.error(Result.BAD_REQUEST, "邮箱已注册");
+                return Result.badRequest("邮箱已注册");
             }
         }
 
@@ -78,7 +79,7 @@ public class UserService {
             }
 
             log.error("用户创建失败，用户名: {}", user.getUsername());
-            return Result.ServerError("用户创建失败,请稍后重试");
+            return Result.serverError("用户创建失败,请稍后重试");
         } catch (Exception e) {
             log.error("用户创建过程中发生异常，用户名: {}", user.getUsername(), e);
             throw e; // 让事务管理器处理回滚
@@ -120,7 +121,7 @@ public class UserService {
         if (existingUser == null) {
             return Result.notFound("用户不存在");
         }
-        
+
         // 使用MyBatis-Plus的updateById，只更新非null字段
         int updated = userMapper.updateById(user);
         return updated > 0 ? Result.success("更新成功") : Result.serverError("更新失败");
@@ -134,17 +135,17 @@ public class UserService {
      */
     public Result<User> getUserById(Long id) {
         if (id == null) {
-            return Result.error(Result.BAD_REQUEST, "ID不能为空");
+            return Result.badRequest("ID不能为空");
         }
 
         try {
             User user = userMapper.selectUserById(id);
             return user != null
                     ? Result.success(user)
-                    : Result.error(Result.NOT_FOUND, "用户不存在");
+                    : Result.notFound("用户不存在");
         } catch (Exception e) {
             log.error("获取用户失败", e);
-            return Result.ServerError("获取用户失败");
+            return Result.serverError("获取用户失败");
         }
     }
 
@@ -165,7 +166,7 @@ public class UserService {
             return Result.success(result);
         } catch (RuntimeException e) {
             log.error("获取用户列表失败", e);
-            return Result.ServerError("获取用户列表失败");
+            return Result.serverError("获取用户列表失败");
         }
     }
 
@@ -178,13 +179,22 @@ public class UserService {
         User user = userMapper.selectOne(new QueryWrapper<User>().eq("username", username));
         if (user == null) {
             log.warn("未找到用户名为 {} 的用户", username);
-        } else {
-            // 延迟加载用户详情
-            // user = userMapper.selectUserById(user.getId()); //
-            // 存在严重bug,手写sql时候User对象的password 字段未正确映射数据库password_encrypted字段
-            user.setRole(user.getRole());
-            log.info("成功找到用户: {}", user.getUsername());
+            return null;
         }
+
+        // 加载用户详情（使用新的方法，正确映射字段并关联 UserDetail）
+        try {
+            user = userMapper.selectUserWithDetailsById(user.getId());
+            if (user != null) {
+                log.info("成功找到用户: {}，详情加载状态: {}",
+                        user.getUsername(),
+                        user.getDetails() != null ? "已加载" : "未找到");
+            }
+        } catch (Exception e) {
+            log.error("加载用户详情失败，用户名: {}", username, e);
+            // 即使加载详情失败，也返回基本用户信息
+        }
+
         return user;
     }
 
@@ -241,7 +251,7 @@ public class UserService {
         User user = userMapper.selectUserById(id);
         if (user == null) {
             log.warn("用户不存在，ID: {}", id);
-            return Result.error(Result.NOT_FOUND, "用户不存在");
+            return Result.notFound("用户不存在");
         }
 
         // 记录更新前的状态值，用于调试
@@ -278,11 +288,11 @@ public class UserService {
                 return Result.success("用户状态更新成功", status);
             } else {
                 log.warn("用户状态更新失败，SQL执行未影响任何行，用户ID: {}", id);
-                return Result.error(Result.BAD_REQUEST, "用户状态更新失败");
+                return Result.badRequest("用户状态更新失败");
             }
         } catch (Exception e) {
             log.error("更新用户状态时发生异常，用户ID: {}, 异常信息: {}", id, e.getMessage(), e);
-            return Result.ServerError("更新用户状态时发生异常: " + e.getMessage());
+            return Result.serverError("更新用户状态时发生异常: " + e.getMessage());
         }
     }
 
@@ -303,7 +313,7 @@ public class UserService {
             User user = getUserByUsername(username);
             if (user == null) {
                 log.warn("用户不存在，无法锁定账户，用户名: {}", username);
-                return Result.error(Result.NOT_FOUND, "用户不存在");
+                return Result.notFound("用户不存在");
             }
 
             try {
@@ -320,15 +330,36 @@ public class UserService {
                     return Result.success("账户因多次登录失败已被锁定");
                 } else {
                     log.error("锁定账户失败，用户名: {}", username);
-                    return Result.error(Result.SERVER_ERROR, "锁定账户失败");
+                    return Result.serverError("锁定账户失败");
                 }
             } catch (Exception e) {
                 log.error("锁定账户时发生异常，用户名: {}, 异常信息: {}", username, e.getMessage(), e);
-                return Result.ServerError("锁定账户时发生异常: " + e.getMessage());
+                return Result.serverError("锁定账户时发生异常: " + e.getMessage());
             }
         } else {
             log.info("登录失败次数未达到锁定阈值，用户名: {}, 当前失败次数: {}", username, attemptCount);
             return Result.success("登录失败已记录，失败次数: " + attemptCount);
+        }
+    }
+
+    /**
+     * 搜索用户（通过用户名或昵称）
+     * 
+     * @param keyword 搜索关键词
+     * @param page    页码
+     * @param size    每页大小
+     * @return 用户列表
+     */
+    public Result<List<com.flowbrain.viewx.pojo.vo.UserSummaryVO>> searchUsers(String keyword, int page, int size) {
+        try {
+            int offset = (page - 1) * size;
+            List<com.flowbrain.viewx.pojo.vo.UserSummaryVO> users = userMapper.searchUsers(keyword, offset, size);
+
+            log.info("搜索用户成功，关键词: {}, 结果数: {}", keyword, users.size());
+            return Result.success(users);
+        } catch (Exception e) {
+            log.error("搜索用户失败，关键词: {}", keyword, e);
+            return Result.serverError("搜索用户失败");
         }
     }
 }

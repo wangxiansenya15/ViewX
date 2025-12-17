@@ -3,6 +3,8 @@ package com.flowbrain.viewx.service;
 import com.flowbrain.viewx.pojo.vo.VideoListVO;
 import java.util.List;
 
+import com.flowbrain.viewx.common.Result;
+
 public interface RecommendService {
 
     /**
@@ -30,4 +32,15 @@ public interface RecommendService {
      * @param videoId The video ID
      */
     void updateVideoScore(Long videoId);
+
+    /**
+     * 搜索视频
+     * 
+     * @param keyword 关键词
+     * @param userId  当前用户ID（用于判断关注、点赞状态）
+     * @param page    页码
+     * @param size    大小
+     * @return 结果
+     */
+    Result<List<VideoListVO>> searchVideos(String keyword, Long userId, int page, int size);
 }

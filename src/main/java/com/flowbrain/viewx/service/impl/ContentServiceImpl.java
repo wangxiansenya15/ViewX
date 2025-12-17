@@ -54,12 +54,12 @@ public class ContentServiceImpl implements ContentService {
         try {
             // 验证文件类型
             if (!isImageFile(imageFile)) {
-                return Result.error(400, "只支持图片文件 (jpg, jpeg, png, gif, webp)");
+                return Result.badRequest("只支持图片文件 (jpg, jpeg, png, gif, webp)");
             }
 
             // 验证文件大小 (最大10MB)
             if (imageFile.getSize() > 10 * 1024 * 1024) {
-                return Result.error(400, "图片大小不能超过10MB");
+                return Result.badRequest("图片大小不能超过10MB");
             }
 
             // 1. 上传原始图片
@@ -77,7 +77,8 @@ public class ContentServiceImpl implements ContentService {
             String thumbnailUrl = imageUrl; // 默认使用原图
             try {
                 byte[] thumbnailBytes = videoProcessingService.generateThumbnailFromCover(imageFile);
-                String thumbnailFilename = "images/thumbnails/thumb_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+                String thumbnailFilename = "images/thumbnails/thumb_" + userId + "_" + System.currentTimeMillis()
+                        + ".jpg";
                 String storedThumbnailFilename = storageStrategy.storeFile(
                         new java.io.ByteArrayInputStream(thumbnailBytes),
                         thumbnailFilename);
@@ -93,7 +94,7 @@ public class ContentServiceImpl implements ContentService {
             content.setTitle(dto.getTitle());
             content.setDescription(dto.getDescription());
             content.setPrimaryUrl(imageUrl);
-            content.setCoverUrl(imageUrl);  // 图片内容的封面就是图片本身
+            content.setCoverUrl(imageUrl); // 图片内容的封面就是图片本身
             content.setThumbnailUrl(thumbnailUrl);
             content.setUploaderId(userId);
             content.setCategory(dto.getCategory());
@@ -118,7 +119,7 @@ public class ContentServiceImpl implements ContentService {
 
         } catch (Exception e) {
             log.error("图片上传失败", e);
-            return Result.error(500, "图片上传失败: " + e.getMessage());
+            return Result.serverError("图片上传失败: " + e.getMessage());
         }
     }
 
@@ -128,19 +129,19 @@ public class ContentServiceImpl implements ContentService {
         try {
             // 验证图片数量 (2-9张)
             if (imageFiles == null || imageFiles.size() < 2) {
-                return Result.error(400, "图片集至少需要2张图片");
+                return Result.badRequest("图片集至少需要2张图片");
             }
             if (imageFiles.size() > 9) {
-                return Result.error(400, "图片集最多支持9张图片");
+                return Result.badRequest("图片集最多支持9张图片");
             }
 
             // 验证所有文件
             for (MultipartFile file : imageFiles) {
                 if (!isImageFile(file)) {
-                    return Result.error(400, "只支持图片文件 (jpg, jpeg, png, gif, webp)");
+                    return Result.badRequest("只支持图片文件 (jpg, jpeg, png, gif, webp)");
                 }
                 if (file.getSize() > 10 * 1024 * 1024) {
-                    return Result.error(400, "单张图片大小不能超过10MB");
+                    return Result.badRequest("单张图片大小不能超过10MB");
                 }
             }
 
@@ -165,7 +166,8 @@ public class ContentServiceImpl implements ContentService {
             String thumbnailUrl = coverUrl;
             try {
                 byte[] thumbnailBytes = videoProcessingService.generateThumbnailFromCover(imageFiles.get(0));
-                String thumbnailFilename = "images/thumbnails/thumb_set_" + userId + "_" + System.currentTimeMillis() + ".jpg";
+                String thumbnailFilename = "images/thumbnails/thumb_set_" + userId + "_" + System.currentTimeMillis()
+                        + ".jpg";
                 String storedThumbnailFilename = storageStrategy.storeFile(
                         new java.io.ByteArrayInputStream(thumbnailBytes),
                         thumbnailFilename);
@@ -181,7 +183,7 @@ public class ContentServiceImpl implements ContentService {
             content.setTitle(dto.getTitle());
             content.setDescription(dto.getDescription());
             content.setPrimaryUrl(imageUrls.get(0)); // 第一张图片作为主图
-            content.setMediaUrls(imageUrls);         // 所有图片URL
+            content.setMediaUrls(imageUrls); // 所有图片URL
             content.setCoverUrl(coverUrl);
             content.setThumbnailUrl(thumbnailUrl);
             content.setUploaderId(userId);
@@ -207,7 +209,7 @@ public class ContentServiceImpl implements ContentService {
 
         } catch (Exception e) {
             log.error("图片集上传失败", e);
-            return Result.error(500, "图片集上传失败: " + e.getMessage());
+            return Result.serverError("图片集上传失败: " + e.getMessage());
         }
     }
 
@@ -215,13 +217,13 @@ public class ContentServiceImpl implements ContentService {
     public Result<ContentDetailVO> getContentDetail(Long contentId, Long userId) {
         Content content = contentMapper.selectById(contentId);
         if (content == null || content.getIsDeleted()) {
-            return Result.error(404, "内容不存在");
+            return Result.notFound("内容不存在");
         }
 
         // 检查可见性
         if ("PRIVATE".equals(content.getVisibility())) {
             if (userId == null || !userId.equals(content.getUploaderId())) {
-                return Result.error(403, "该内容为私有内容");
+                return Result.forbidden("该内容为私有内容");
             }
         }
 
@@ -238,8 +240,7 @@ public class ContentServiceImpl implements ContentService {
             vo.setUploaderNickname(uploader.getNickname());
 
             // 获取头像
-            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.flowbrain.viewx.pojo.entity.UserDetail> query = 
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.flowbrain.viewx.pojo.entity.UserDetail> query = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
             query.eq("user_id", content.getUploaderId());
             com.flowbrain.viewx.pojo.entity.UserDetail detail = userDetailMapper.selectOne(query);
 
@@ -267,31 +268,30 @@ public class ContentServiceImpl implements ContentService {
 
     @Override
     public Result<List<ContentVO>> getUserContents(Long userId, String contentType) {
-        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Content> query = 
-            new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
-        
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Content> query = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+
         query.eq("uploader_id", userId);
-        
+
         if (contentType != null && !contentType.isEmpty()) {
             query.eq("content_type", contentType);
         }
-        
+
         query.orderByDesc("created_at");
-        
+
         List<Content> contents = contentMapper.selectList(query);
-        
+
         List<ContentVO> voList = contents.stream().map(content -> {
             ContentVO vo = new ContentVO();
             BeanUtils.copyProperties(content, vo);
-            
+
             // 图片集特殊处理
             if ("IMAGE_SET".equals(content.getContentType()) && content.getMediaUrls() != null) {
                 vo.setImageCount(content.getMediaUrls().size());
             }
-            
+
             return vo;
         }).collect(Collectors.toList());
-        
+
         return Result.success(voList);
     }
 
@@ -299,11 +299,11 @@ public class ContentServiceImpl implements ContentService {
     public Result<String> deleteContent(Long userId, Long contentId) {
         Content content = contentMapper.selectById(contentId);
         if (content == null) {
-            return Result.error(404, "内容不存在");
+            return Result.notFound("内容不存在");
         }
 
         if (!content.getUploaderId().equals(userId)) {
-            return Result.error(403, "无权删除此内容");
+            return Result.forbidden("无权删除此内容");
         }
 
         contentMapper.deleteById(contentId);
@@ -314,27 +314,25 @@ public class ContentServiceImpl implements ContentService {
 
     private boolean isImageFile(MultipartFile file) {
         String contentType = file.getContentType();
-        return contentType != null && (
-            contentType.equals("image/jpeg") ||
-            contentType.equals("image/jpg") ||
-            contentType.equals("image/png") ||
-            contentType.equals("image/gif") ||
-            contentType.equals("image/webp")
-        );
+        return contentType != null && (contentType.equals("image/jpeg") ||
+                contentType.equals("image/jpg") ||
+                contentType.equals("image/png") ||
+                contentType.equals("image/gif") ||
+                contentType.equals("image/webp"));
     }
 
     private void extractAndAssociateTopics(Long contentId, String title, String description) {
         try {
             Set<String> topics = new HashSet<>();
-            
+
             if (title != null) {
                 topics.addAll(topicService.extractTopicsFromText(title));
             }
-            
+
             if (description != null) {
                 topics.addAll(topicService.extractTopicsFromText(description));
             }
-            
+
             if (!topics.isEmpty()) {
                 topicService.associateTopicsWithVideo(contentId, topics);
                 log.info("内容 {} 关联了 {} 个话题: {}", contentId, topics.size(), topics);

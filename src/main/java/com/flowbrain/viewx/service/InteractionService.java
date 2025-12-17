@@ -3,6 +3,7 @@ package com.flowbrain.viewx.service;
 import com.flowbrain.viewx.common.Result;
 import com.flowbrain.viewx.pojo.dto.CommentCreateDTO;
 import com.flowbrain.viewx.pojo.vo.CommentVO;
+import com.flowbrain.viewx.pojo.vo.UserSummaryVO;
 
 import java.util.List;
 
@@ -13,7 +14,7 @@ import java.util.List;
 public interface InteractionService {
 
     // ==================== 点赞相关 ====================
-    
+
     /**
      * 切换点赞状态（点赞/取消点赞）
      */
@@ -25,7 +26,7 @@ public interface InteractionService {
     boolean isLiked(Long userId, Long videoId);
 
     // ==================== 收藏相关 ====================
-    
+
     /**
      * 切换收藏状态（收藏/取消收藏）
      */
@@ -37,7 +38,7 @@ public interface InteractionService {
     boolean isFavorited(Long userId, Long videoId);
 
     // ==================== 评论相关 ====================
-    
+
     /**
      * 发表评论
      */
@@ -59,7 +60,7 @@ public interface InteractionService {
     Result<String> toggleCommentLike(Long userId, Long commentId);
 
     // ==================== 关注相关 ====================
-    
+
     /**
      * 关注/取消关注用户
      */
@@ -71,6 +72,11 @@ public interface InteractionService {
     boolean isFollowing(Long followerId, Long followedId);
 
     /**
+     * 检查是否相互关注
+     */
+    boolean isMutualFollow(Long userId1, Long userId2);
+
+    /**
      * 获取粉丝数
      */
     long getFollowerCount(Long userId);
@@ -79,4 +85,14 @@ public interface InteractionService {
      * 获取关注数
      */
     long getFollowingCount(Long userId);
+
+    /**
+     * 获取粉丝列表
+     */
+    Result<List<UserSummaryVO>> getFollowers(Long userId, Long currentUserId, int page, int size);
+
+    /**
+     * 获取关注列表
+     */
+    Result<List<UserSummaryVO>> getFollowing(Long userId, Long currentUserId, int page, int size);
 }

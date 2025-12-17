@@ -56,13 +56,13 @@ public class VideoServiceImpl implements VideoService {
     public Result<VideoDetailVO> getVideoDetail(Long videoId, Long userId) {
         Video video = videoMapper.selectById(videoId);
         if (video == null || video.getIsDeleted()) {
-            return Result.error(404, "视频不存在");
+            return Result.notFound("视频不存在");
         }
 
         // 检查可见性
         if ("PRIVATE".equals(video.getVisibility())) {
             if (userId == null || !userId.equals(video.getUploaderId())) {
-                return Result.error(403, "该视频为私有视频");
+                return Result.forbidden("该视频为私有视频");
             }
         }
 
@@ -232,7 +232,7 @@ public class VideoServiceImpl implements VideoService {
 
         } catch (Exception e) {
             log.error("视频上传失败", e);
-            return Result.error(500, "视频上传失败: " + e.getMessage());
+            return Result.serverError("视频上传失败: " + e.getMessage());
         }
     }
 
@@ -241,11 +241,11 @@ public class VideoServiceImpl implements VideoService {
     public Result<String> updateVideo(Long userId, Long videoId, VideoUpdateDTO dto) {
         Video video = videoMapper.selectById(videoId);
         if (video == null) {
-            return Result.error(404, "视频不存在");
+            return Result.notFound("视频不存在");
         }
 
         if (!video.getUploaderId().equals(userId)) {
-            return Result.error(403, "无权修改此视频");
+            return Result.forbidden("无权修改此视频");
         }
 
         boolean changed = false;
@@ -323,7 +323,7 @@ public class VideoServiceImpl implements VideoService {
             return Result.success(vo);
         } catch (Exception e) {
             log.error("封面上传失败", e);
-            return Result.error(500, "封面上传失败: " + e.getMessage());
+            return Result.serverError("封面上传失败: " + e.getMessage());
         }
     }
 
@@ -331,12 +331,12 @@ public class VideoServiceImpl implements VideoService {
     public Result<String> deleteVideo(Long userId, Long videoId) {
         Video video = videoMapper.selectById(videoId);
         if (video == null) {
-            return Result.error(404, "视频不存在");
+            return Result.notFound("视频不存在");
         }
 
         // 权限检查：必须是上传者才能删除
         if (!video.getUploaderId().equals(userId)) {
-            return Result.error(403, "无权删除此视频");
+            return Result.forbidden("无权删除此视频");
         }
 
         videoMapper.deleteById(videoId);
