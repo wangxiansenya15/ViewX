@@ -15,6 +15,22 @@ export interface ChatMessage {
     createdAt: string
 }
 
+export interface Notification {
+    id: number
+    recipientId: number
+    senderId: number
+    senderNickname: string
+    senderAvatar: string
+    notificationType: string
+    notificationTypeDesc: string
+    relatedVideoId?: number
+    relatedCommentId?: number
+    content: string
+    isRead: boolean
+    createdAt: string
+    timeDesc: string
+}
+
 class WebSocketService {
     private client: Client | null = null
     private connected = false
@@ -23,6 +39,7 @@ class WebSocketService {
     private reconnectDelay = 3000
     private messageCallbacks: ((message: ChatMessage) => void)[] = []
     private typingCallbacks: ((userId: number) => void)[] = []
+    private notificationCallbacks: ((notification: Notification) => void)[] = []
     private connectCallbacks: (() => void)[] = []
 
     /**
@@ -36,7 +53,8 @@ class WebSocketService {
             }
 
             const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-            const wsUrl = apiBaseUrl.replace(/^http/, 'ws') + '/ws'
+            // SockJS requires HTTP/HTTPS URL, not WS/WSS
+            const wsUrl = apiBaseUrl + '/ws'
 
             this.client = new Client({
                 webSocketFactory: () => new SockJS(wsUrl),
@@ -99,6 +117,20 @@ class WebSocketService {
                 console.error('解析正在输入通知失败:', error)
             }
         })
+
+        // 订阅通知消息
+        const userId = localStorage.getItem('userId')
+        if (userId) {
+            this.client.subscribe(`/topic/notifications/${userId}`, (message: IMessage) => {
+                try {
+                    const notification: Notification = JSON.parse(message.body)
+                    console.log('收到新通知:', notification)
+                    this.notificationCallbacks.forEach(cb => cb(notification))
+                } catch (error) {
+                    console.error('解析通知失败:', error)
+                }
+            })
+        }
 
         // 发送连接确认
         this.send('/app/chat.connect', {})
@@ -180,6 +212,13 @@ class WebSocketService {
     }
 
     /**
+     * 注册通知回调
+     */
+    onNotification(callback: (notification: Notification) => void) {
+        this.notificationCallbacks.push(callback)
+    }
+
+    /**
      * 注册连接成功回调
      */
     onConnect(callback: () => void) {
@@ -196,6 +235,7 @@ class WebSocketService {
             this.connected = false
             this.messageCallbacks = []
             this.typingCallbacks = []
+            this.notificationCallbacks = []
             this.connectCallbacks = []
             console.log('WebSocket 已断开')
         }

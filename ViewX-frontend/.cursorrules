@@ -28,6 +28,98 @@
    - Use `ref` and `computed` for local state.
    - Ensure reactivity is preserved when destructuring.
 
+## ⚠️ CRITICAL: Snowflake ID Handling
+
+**背景**: 后端使用雪花算法（Snowflake）生成 64 位 ID，超过 JavaScript 的安全整数范围（53 位）。
+
+### 必须遵守的规则
+
+1. **API 接口定义**:
+   ```typescript
+   // ✅ 正确：所有 ID 字段使用 string 或 number
+   interface UserVO {
+     userId: number  // 后端返回时会自动转换
+     id: number
+   }
+   
+   // ⚠️ 注意：从后端接收的大数字可能已经丢失精度
+   ```
+
+2. **URL 参数传递**:
+   ```typescript
+   // ✅ 正确：保持字符串格式
+   router.push({
+     path: '/profile',
+     query: { userId: userId.toString() }
+   })
+   
+   // ❌ 错误：直接传递数字可能丢失精度
+   router.push({
+     query: { userId: userId }
+   })
+   ```
+
+3. **URL 参数接收**:
+   ```typescript
+   // ✅ 正确：保持字符串，直接传给 API
+   const userId = route.query.userId as string
+   const profile = await userApi.getUserProfile(userId)
+   
+   // ❌ 错误：parseInt() 会丢失精度
+   const userId = parseInt(route.query.userId)
+   
+   // ❌ 错误：Number() 也可能丢失精度
+   const userId = Number(route.query.userId)
+   ```
+
+4. **ID 比较**:
+   ```typescript
+   // ✅ 正确：转换为字符串比较
+   if (user.id.toString() === targetId.toString()) {
+     // ...
+   }
+   
+   // ⚠️ 可能不准确：直接数字比较
+   if (user.id === Number(targetId)) {
+     // 如果 ID 超过 Number.MAX_SAFE_INTEGER，可能不准确
+   }
+   ```
+
+5. **API 调用**:
+   ```typescript
+   // ✅ 正确：传递字符串或数字都可以，后端会自动转换
+   userApi.getUserProfile(userId.toString())
+   userApi.getUserProfile(userId)  // 如果 userId 是 number
+   
+   // ❌ 错误：先用 parseInt 转换
+   userApi.getUserProfile(parseInt(userIdStr))  // 可能丢失精度
+   ```
+
+### 受影响的 ID 字段
+以下字段都使用雪花算法生成，必须小心处理：
+- `userId` - 用户 ID
+- `videoId` - 视频 ID
+- `commentId` - 评论 ID
+- `messageId` - 消息 ID
+- `conversationId` - 会话 ID
+- `notificationId` - 通知 ID
+- 所有其他实体的 `id` 字段
+
+### 安全范围
+```typescript
+// JavaScript 安全整数范围
+Number.MAX_SAFE_INTEGER = 9007199254740991  // 2^53 - 1
+
+// 雪花 ID 范围
+Snowflake ID ≈ 2^63 - 1  // 远超 JavaScript 安全范围
+```
+
+### 最佳实践
+1. **优先使用字符串**：在前端内部传递 ID 时，优先使用字符串
+2. **避免数字转换**：除非必要，不要将 ID 字符串转换为数字
+3. **API 传递灵活**：传给后端时，字符串和数字都可以（Spring 会自动转换）
+4. **比较用字符串**：ID 比较时，统一转换为字符串
+
 ## Project Structure
 - `src/components`: Reusable UI components.
 - `src/views`: Page-level components.

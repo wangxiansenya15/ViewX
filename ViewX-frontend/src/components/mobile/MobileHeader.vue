@@ -31,7 +31,7 @@
         <Search class="w-6 h-6 shadow-sm" />
       </button>
       <!-- Notifications -->
-      <button class="p-1 rounded-full active:bg-white/10 relative transition-colors">
+      <button @click="$router.push('/notifications')" class="p-1 rounded-full active:bg-white/10 relative transition-colors">
         <Bell class="w-6 h-6 shadow-sm" />
         <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-black/50"></span>
       </button>

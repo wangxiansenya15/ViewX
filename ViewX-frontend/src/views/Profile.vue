@@ -95,14 +95,47 @@
                   <p class="text-gray-400 max-w-lg">{{ profile?.description || '这个人很懒，什么都没有写~' }}</p>
                 </div>
                 
+                
                 <!-- Actions -->
                 <div class="flex gap-3">
+                  <!-- Follow Button (Only for other users) -->
+                  <button 
+                    v-if="!isOwnProfile"
+                    @click="toggleFollow"
+                    :disabled="followLoading"
+                    class="px-6 py-2.5 rounded-full font-medium transition-all flex items-center gap-2 active:scale-95"
+                    :class="isFollowing ? 'bg-gray-500/20 hover:bg-gray-500/30 text-[var(--text)]' : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/20'"
+                  >
+                    <svg v-if="!isFollowing" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {{ followLoading ? '处理中...' : (isMutualFollow ? '相互关注' : (isFollowing ? '已关注' : '关注')) }}
+                  </button>
+
+                  <!-- Message Button (Only for other users) -->
+                  <button 
+                    v-if="!isOwnProfile"
+                    @click="startChat"
+                    class="px-6 py-2.5 rounded-full bg-white/5 hover:bg-white/10 text-[var(--text)] transition-all flex items-center gap-2 border border-white/10 hover:border-white/20 active:scale-95"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    发消息
+                  </button>
+
+                  <!-- Share Button -->
                   <button class="px-4 py-2 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-[var(--text)] transition-colors flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                     分享
                   </button>
+
+                  <!-- Edit Button (Only for own profile) -->
                   <button v-if="isOwnProfile" @click="openEditModal" class="px-4 py-2 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-[var(--text)] transition-colors flex items-center gap-2" title="编辑资料">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -279,8 +312,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, defineComponent, reactive, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { userApi, videoApi, interactionApi, type UserProfileVO, type VideoVO } from '@/api'
+import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import { Grid, Heart, Bookmark, History, Lock, Trash, Edit2 } from 'lucide-vue-next'
 import VideoCard from '@/components/VideoCard.vue'
@@ -297,6 +331,7 @@ import { inject, type Ref } from 'vue'
 const openVideoDetail = inject<(v: VideoVO) => void>('openDesktopVideo')
 const isLoggedIn = inject<Ref<boolean>>('isLoggedIn')
 const route = useRoute()
+const router = useRouter()
 
 // Helper component for empty states
 const EmptyState = defineComponent({
@@ -343,6 +378,11 @@ const isEditing = ref(false)
 const saving = ref(false)
 const editForm = ref<Partial<UserProfileVO>>({})
 const fileInput = ref<HTMLInputElement | null>(null)
+
+// Follow state
+const isFollowing = ref(false)
+const isMutualFollow = ref(false)
+const followLoading = ref(false)
 
 // UserListModal state
 const showUserListModal = ref(false)
@@ -401,6 +441,11 @@ const handleAvatarUpload = async (event: Event) => {
 const fetchProfile = async () => {
   loading.value = true
   error.value = ''
+  
+  // Reset follow status
+  isFollowing.value = false
+  isMutualFollow.value = false
+  
   try {
     const userId = route.params.userId as string
     
@@ -409,10 +454,23 @@ const fetchProfile = async () => {
       // 直接传递字符串，避免 Number() 转换导致的精度丢失
       const res = await userApi.getUserProfile(userId)
       profile.value = res
+      
+      // Fetch detailed follow status for other users' profiles
+      if (profile.value?.userId) {
+        try {
+          const followStatus = await interactionApi.getDetailedFollowStatus(profile.value.userId)
+          isFollowing.value = followStatus.isFollowing
+          isMutualFollow.value = followStatus.isMutual
+          console.log('Follow status fetched:', followStatus, 'for user:', profile.value.userId)
+        } catch (err) {
+          console.error('Failed to fetch follow status:', err)
+        }
+      }
     } else {
       const res = await userApi.getMyProfile()
       profile.value = res
     }
+
     
     // Update tab counts if available
     tabs[0].count = profile.value?.videoCount
@@ -526,6 +584,45 @@ const editVideo = async (video: VideoVO) => {
     console.error('Update failed:', e)
     alert('更新失败')
   }
+}
+
+// Toggle follow
+const toggleFollow = async () => {
+  if (!profile.value?.userId) return
+  
+  followLoading.value = true
+  try {
+    await interactionApi.toggleFollow(profile.value.userId)
+    isFollowing.value = !isFollowing.value
+    
+    // Update follower count
+    if (profile.value) {
+      if (isFollowing.value) {
+        profile.value.followersCount = (profile.value.followersCount || 0) + 1
+        ElMessage.success('关注成功')
+      } else {
+        profile.value.followersCount = Math.max(0, (profile.value.followersCount || 0) - 1)
+        ElMessage.info('已取消关注')
+      }
+    }
+  } catch (err: any) {
+    console.error('Toggle follow failed:', err)
+    ElMessage.error(err.message || '操作失败')
+  } finally {
+    followLoading.value = false
+  }
+}
+
+// Start chat
+const startChat = () => {
+  if (!profile.value?.userId) return
+  
+  // Navigate to messages page with the user ID
+  // The Messages page will handle opening the conversation
+  router.push({
+    path: '/messages',
+    query: { userId: profile.value.userId }
+  })
 }
 
 onMounted(() => {

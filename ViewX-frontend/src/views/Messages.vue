@@ -45,13 +45,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useChatStore, useUserStore } from '@/stores'
 import ChatList from '@/components/chat/ChatList.vue'
 import ChatWindow from '@/components/chat/ChatWindow.vue'
 import { Loading, ChatDotRound } from '@element-plus/icons-vue'
-import type { ConversationVO } from '@/api'
+import { ElMessage } from 'element-plus'
+import { userApi, type ConversationVO } from '@/api'
 
+
+const route = useRoute()
 const chatStore = useChatStore()
 const userStore = useUserStore()
 
@@ -74,11 +78,68 @@ function handleTyping() {
   }
 }
 
+// 根据 userId 查询参数打开对话
+async function openConversationByUserId(userId: string | number) {
+  if (!userId) return
+  
+  // Keep as string to avoid precision loss with large numbers (snowflake IDs)
+  const userIdStr = typeof userId === 'number' ? userId.toString() : userId
+  
+  // 查找现有会话 - 需要转换为数字进行比较
+  const existingConversation = chatStore.conversations.find(
+    conv => conv.otherUserId.toString() === userIdStr
+  )
+  
+  if (existingConversation) {
+    // 如果会话已存在，直接选择
+    chatStore.selectConversation(existingConversation)
+    console.log('Selected existing conversation with user:', userIdStr)
+  } else {
+    // 如果会话不存在，获取用户信息并创建临时会话
+    try {
+      const userProfile = await userApi.getUserProfile(userIdStr)
+      
+      // 创建临时会话对象
+      const tempConversation: ConversationVO = {
+        conversationId: 0, // 临时ID，发送第一条消息时会创建真实会话
+        otherUserId: Number(userIdStr), // Use Number() to preserve precision
+        otherUserUsername: userProfile.username,
+        otherUserNickname: userProfile.nickname,
+        otherUserAvatar: userProfile.avatarUrl,
+        isOnline: false,
+        lastMessage: '',
+        lastMessageType: 'TEXT',
+        lastMessageTime: new Date().toISOString(),
+        unreadCount: 0
+      }
+      
+      // 选择临时会话
+      chatStore.selectConversation(tempConversation)
+      console.log('Created temporary conversation with user:', userIdStr)
+    } catch (error) {
+      console.error('Failed to create conversation:', error)
+      ElMessage.error('无法打开对话，请稍后重试')
+    }
+  }
+}
+
 // 初始化
 onMounted(async () => {
   if (userStore.isLoggedIn) {
     await chatStore.initWebSocket()
     await chatStore.loadConversations()
+    
+    // 检查是否有 userId 查询参数
+    if (route.query.userId) {
+      await openConversationByUserId(route.query.userId as string)
+    }
+  }
+})
+
+// 监听路由变化
+watch(() => route.query.userId, (newUserId) => {
+  if (newUserId && chatStore.conversations.length > 0) {
+    openConversationByUserId(newUserId as string)
   }
 })
 

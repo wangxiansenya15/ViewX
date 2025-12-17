@@ -18,10 +18,9 @@
         </button>
 
         <!-- Messages -->
-        <!-- Messages -->
-        <button class="flex flex-col items-center gap-1.5 flex-1 transition-all text-gray-400 active:text-white">
-           <MessageCircle class="w-7 h-7" />
-           <span class="text-xs">消息</span>
+        <button @click="$router.push('/messages')" class="flex flex-col items-center gap-1.5 flex-1 transition-all" :class="activeRoute === 'messages' ? 'text-white' : 'text-gray-400'">
+           <MessageCircle class="w-7 h-7" :class="activeRoute === 'messages' ? 'fill-current' : ''" />
+           <span class="text-xs font-medium">消息</span>
         </button>
 
         <!-- Profile -->

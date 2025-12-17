@@ -59,17 +59,28 @@
                 <img 
                   v-if="notification.senderAvatar"
                   :src="notification.senderAvatar" 
-                  class="w-10 h-10 rounded-full flex-shrink-0"
+                  class="w-10 h-10 rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
                   alt="avatar"
+                  @click.stop="goToUserProfile(notification.senderId)"
                 />
-                <div v-else class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                <div 
+                  v-else 
+                  class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+                  @click.stop="goToUserProfile(notification.senderId)"
+                >
                   <Bell class="w-5 h-5 text-white" />
                 </div>
 
                 <!-- 通知内容 -->
                 <div class="flex-1 min-w-0">
                   <p class="text-sm text-[var(--text)] mb-1">
-                    <span v-if="notification.senderNickname" class="font-medium">{{ notification.senderNickname }}</span>
+                    <span 
+                      v-if="notification.senderNickname" 
+                      class="font-medium cursor-pointer hover:text-indigo-500 transition-colors"
+                      @click.stop="goToUserProfile(notification.senderId)"
+                    >
+                      {{ notification.senderNickname }}
+                    </span>
                     <span class="text-[var(--muted)] ml-1">{{ notification.notificationTypeDesc }}</span>
                   </p>
                   <p v-if="notification.relatedVideoTitle" class="text-xs text-[var(--muted)] truncate">
@@ -175,9 +186,17 @@ const handleNotificationClick = async (notification: NotificationVO) => {
   if (notification.relatedVideoId) {
     router.push(`/video/${notification.relatedVideoId}`)
   } else if (notification.senderId) {
-    router.push(`/user/${notification.senderId}`)
+    router.push(`/profile/${notification.senderId}`)
   }
 }
+
+// 跳转到用户主页
+const goToUserProfile = (userId?: number) => {
+  if (!userId) return
+  showDropdown.value = false
+  router.push(`/profile/${userId}`)
+}
+
 
 // 点击外部关闭下拉框
 const handleClickOutside = (e: MouseEvent) => {

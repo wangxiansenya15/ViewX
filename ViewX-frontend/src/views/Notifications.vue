@@ -42,10 +42,15 @@
               <img 
                 v-if="notification.senderAvatar"
                 :src="notification.senderAvatar" 
-                class="w-12 h-12 rounded-full flex-shrink-0"
+                class="w-12 h-12 rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
                 alt="avatar"
+                @click.stop="goToUserProfile(notification.senderId)"
               />
-              <div v-else class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+              <div 
+                v-else 
+                class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+                @click.stop="goToUserProfile(notification.senderId)"
+              >
                 <Bell class="w-6 h-6 text-white" />
               </div>
 
@@ -53,7 +58,13 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-start justify-between gap-2 mb-1">
                   <p class="text-sm text-[var(--text)] font-medium">
-                    <span v-if="notification.senderNickname">{{ notification.senderNickname }}</span>
+                    <span 
+                      v-if="notification.senderNickname" 
+                      class="cursor-pointer hover:text-indigo-500 transition-colors"
+                      @click.stop="goToUserProfile(notification.senderId)"
+                    >
+                      {{ notification.senderNickname }}
+                    </span>
                     <span class="text-[var(--muted)] ml-1">{{ notification.notificationTypeDesc }}</span>
                   </p>
                   <div v-if="!notification.isRead" class="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-1"></div>
@@ -146,10 +157,15 @@
               <img 
                 v-if="notification.senderAvatar"
                 :src="notification.senderAvatar" 
-                class="w-14 h-14 rounded-full flex-shrink-0"
+                class="w-14 h-14 rounded-full flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
                 alt="avatar"
+                @click.stop="goToUserProfile(notification.senderId)"
               />
-              <div v-else class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+              <div 
+                v-else 
+                class="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-indigo-500 transition-all"
+                @click.stop="goToUserProfile(notification.senderId)"
+              >
                 <Bell class="w-7 h-7 text-white" />
               </div>
 
@@ -158,7 +174,13 @@
                 <div class="flex items-start justify-between gap-4 mb-2">
                   <div>
                     <p class="text-base text-[var(--text)] font-medium mb-1">
-                      <span v-if="notification.senderNickname">{{ notification.senderNickname }}</span>
+                      <span 
+                        v-if="notification.senderNickname" 
+                        class="cursor-pointer hover:text-indigo-500 transition-colors"
+                        @click.stop="goToUserProfile(notification.senderId)"
+                      >
+                        {{ notification.senderNickname }}
+                      </span>
                       <span class="text-[var(--muted)] ml-2">{{ notification.notificationTypeDesc }}</span>
                     </p>
                     
@@ -299,8 +321,14 @@ const handleNotificationClick = async (notification: NotificationVO) => {
   if (notification.relatedVideoId) {
     router.push(`/video/${notification.relatedVideoId}`)
   } else if (notification.senderId) {
-    router.push(`/user/${notification.senderId}`)
+    router.push(`/profile/${notification.senderId}`)
   }
+}
+
+// 跳转到用户主页
+const goToUserProfile = (userId?: number) => {
+  if (!userId) return
+  router.push(`/profile/${userId}`)
 }
 
 onMounted(() => {

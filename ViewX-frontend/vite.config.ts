@@ -10,6 +10,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  define: {
+    // Fix for sockjs-client: provide global variable
+    global: 'globalThis'
+  },
   server: {
     proxy: {
       '/api': {
