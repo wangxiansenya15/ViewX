@@ -66,8 +66,24 @@
          />
          
          <main class="flex-1 overflow-y-auto scroll-smooth relative" id="desktop-main">
-            <router-view v-slot="{ Component }">
-               <component :is="Component" :theme="theme" :isLoggedIn="isLoggedIn" @toggle-theme="toggleTheme" />
+            <router-view v-slot="{ Component, route }">
+               <keep-alive>
+                  <component 
+                    :is="Component" 
+                    :key="route.meta.keepAlive ? undefined : route.fullPath"
+                    :theme="theme" 
+                    :isLoggedIn="isLoggedIn" 
+                    @toggle-theme="toggleTheme" 
+                    v-if="route.meta.keepAlive"
+                  />
+               </keep-alive>
+               <component 
+                 :is="Component" 
+                 :theme="theme" 
+                 :isLoggedIn="isLoggedIn" 
+                 @toggle-theme="toggleTheme" 
+                 v-if="!route.meta.keepAlive"
+               />
             </router-view>
          </main>
        </div>

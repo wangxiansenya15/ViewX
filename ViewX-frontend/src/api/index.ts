@@ -26,6 +26,22 @@ export interface LoginVO {
 }
 
 // 视频列表 VO
+export interface VideoListVO {
+    id: number
+    title: string
+    description?: string
+    coverUrl?: string
+    thumbnailUrl: string
+    duration: number
+    viewCount: number
+    likeCount: number
+    commentCount: number
+    publishedAt: string
+    uploaderId: number
+    uploaderNickname: string
+    uploaderAvatar: string
+}
+
 export interface VideoVO {
     id: number
     title: string
@@ -114,6 +130,15 @@ export interface UserProfileVO {
     followingCount: number
     videoCount: number
     likeCount: number
+    videos?: VideoVO[]  // 用户的视频列表（可选）
+}
+
+// 关注状态 VO
+export interface FollowStatusVO {
+    isFollowing: boolean
+    isFollower: boolean
+    isMutual: boolean
+    statusText: string  // "关注" | "已关注" | "相互关注"
 }
 
 // 内容上传 DTO
@@ -214,6 +239,11 @@ export const videoApi = {
         return request.get<VideoVO[]>('/videos/my')
     },
 
+    // 获取指定用户的视频
+    getUserVideos(userId: number | string) {
+        return request.get<VideoVO[]>(`/videos/user/${userId}`)
+    },
+
     // 获取推荐视频流
     getFeed(page = 1, size = 10) {
         return request.get<VideoVO[]>('/recommend/feed', { params: { page, size } })
@@ -275,6 +305,15 @@ export const videoApi = {
     }
 }
 
+// 用户摘要 VO (用于列表)
+export interface UserSummaryVO {
+    id: number
+    username: string
+    nickname: string
+    avatar: string
+    isFollowing: boolean
+}
+
 // 交互相关 API
 export const interactionApi = {
     // 点赞/取消点赞
@@ -302,9 +341,41 @@ export const interactionApi = {
         return request.get<boolean>(`/interactions/follow/status/${userId}`)
     },
 
+    // 获取详细的关注状态（包括相互关注）
+    getDetailedFollowStatus(userId: number) {
+        return request.get<FollowStatusVO>(`/interactions/follow/detailed-status/${userId}`)
+    },
+
     // 获取用户的粉丝数和关注数
     getFollowStats(userId: number) {
         return request.get<{ followerCount: number; followingCount: number }>(`/interactions/follow/stats/${userId}`)
+    },
+
+    // 获取粉丝列表
+    getFollowers(userId: number, page = 1, size = 20) {
+        return request.get<UserSummaryVO[]>(`/interactions/followers/${userId}`, { params: { page, size } })
+    },
+
+    // 获取关注列表
+    getFollowing(userId: number, page = 1, size = 20) {
+        return request.get<UserSummaryVO[]>(`/interactions/following/${userId}`, { params: { page, size } })
+    }
+}
+
+// 搜索 API
+export const search = {
+    // 搜索用户
+    searchUsers(keyword: string, page = 1, size = 20) {
+        return request.get<UserSummaryVO[]>('/users/search', {
+            params: { keyword, page, size }
+        })
+    },
+
+    // 搜索视频
+    searchVideos(keyword: string, page = 1, size = 20) {
+        return request.get<VideoListVO[]>('/recommend/search', {
+            params: { keyword, page, size }
+        })
     }
 }
 
@@ -313,7 +384,7 @@ export const userApi = {
     getMyProfile() {
         return request.get<UserProfileVO>('/user/profile/me')
     },
-    getUserProfile(userId: number) {
+    getUserProfile(userId: number | string) {
         return request.get<UserProfileVO>(`/user/profile/${userId}`)
     },
     updateProfile(data: Partial<UserProfileVO>) {
@@ -492,5 +563,60 @@ export const notificationApi = {
     // 删除通知
     deleteNotification(id: number) {
         return request.delete<string>(`/notifications/${id}`)
+    }
+}
+
+// ==================== 聊天相关接口 ====================
+
+// 会话 VO
+export interface ConversationVO {
+    conversationId: number
+    otherUserId: number
+    otherUserUsername: string
+    otherUserNickname: string
+    otherUserAvatar: string
+    isOnline: boolean
+    lastMessage: string
+    lastMessageType: string
+    lastMessageTime: string
+    unreadCount: number
+}
+
+// 消息 VO
+export interface MessageVO {
+    id: number
+    senderId: number
+    senderUsername: string
+    senderNickname: string
+    senderAvatar: string
+    receiverId: number
+    content: string
+    messageType: string
+    isRead: boolean
+    createdAt: string
+}
+
+// 聊天 API
+export const chatApi = {
+    // 获取会话列表
+    getConversations() {
+        return request.get<ConversationVO[]>('/messages/conversations')
+    },
+
+    // 获取聊天历史
+    getChatHistory(otherUserId: number, page: number = 1, size: number = 50) {
+        return request.get<MessageVO[]>(`/messages/history/${otherUserId}`, {
+            params: { page, size }
+        })
+    },
+
+    // 标记消息为已读
+    markAsRead(otherUserId: number) {
+        return request.put<void>(`/messages/read/${otherUserId}`)
+    },
+
+    // 获取未读消息总数
+    getUnreadCount() {
+        return request.get<number>('/messages/unread-count')
     }
 }

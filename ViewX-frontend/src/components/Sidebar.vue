@@ -88,7 +88,7 @@ watch(() => route.path, (newPath) => {
   else if (newPath.startsWith('/trending')) activeTab.value = 'trending'
   else if (newPath.startsWith('/subscriptions')) activeTab.value = 'subs'
   else if (newPath.startsWith('/library')) activeTab.value = 'library'
-  else if (newPath.startsWith('/profile')) activeTab.value = 'profile'
+  else if (newPath === '/profile') activeTab.value = 'profile' // 只匹配精确路径
   else if (newPath.startsWith('/notifications')) activeTab.value = 'notifications'
   else if (newPath.startsWith('/messages')) activeTab.value = 'messages'
   else if (newPath.startsWith('/settings')) activeTab.value = 'settings'

@@ -72,6 +72,10 @@ const showComments = ref(false)
 const loadMoreTriggered = ref(false)
 let scrollTimeout: any = null
 
+// 保存滚动位置
+let savedScrollTop = 0
+let savedCurrentIndex = 0
+
 const handleScroll = () => {
   if (!containerRef.value) return
   
@@ -80,6 +84,10 @@ const handleScroll = () => {
     const scrollTop = containerRef.value!.scrollTop
     const clientHeight = containerRef.value!.clientHeight
     const index = Math.round(scrollTop / clientHeight)
+    
+    // 实时保存滚动位置
+    savedScrollTop = scrollTop
+    savedCurrentIndex = index
     
     if (index !== currentIndex.value && index >= 0 && index < props.videos.length) {
       currentIndex.value = index
@@ -128,8 +136,51 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 }
 
+// 保存滚动位置方法
+const saveScrollPosition = () => {
+  console.log('🔴 [DesktopFeed] saveScrollPosition - scrollTop:', savedScrollTop, 'index:', savedCurrentIndex)
+}
+
+// 恢复滚动位置方法
+const restoreScrollPosition = () => {
+  console.log('🟢 [DesktopFeed] RESTORING - savedScrollTop:', savedScrollTop, 'savedIndex:', savedCurrentIndex)
+  
+  if (!containerRef.value) {
+    console.warn('🟢 [DesktopFeed] Cannot restore - containerRef is null')
+    return
+  }
+  
+  // 临时移除 scroll-smooth 类
+  const container = containerRef.value
+  const hadSmoothScroll = container.classList.contains('scroll-smooth')
+  
+  if (hadSmoothScroll) {
+    container.classList.remove('scroll-smooth')
+  }
+  
+  // 立即设置滚动位置，不等待 requestAnimationFrame
+  containerRef.value.scrollTop = savedScrollTop
+  currentIndex.value = savedCurrentIndex
+  console.log('🟢 [DesktopFeed] RESTORED - scrollTop:', containerRef.value.scrollTop, 'currentIndex:', currentIndex.value)
+  
+  // 恢复 scroll-smooth 类
+  if (hadSmoothScroll) {
+    setTimeout(() => {
+      if (containerRef.value) {
+        containerRef.value.classList.add('scroll-smooth')
+      }
+    }, 100)
+  }
+}
+
 onMounted(() => {
     window.addEventListener('keydown', handleKeydown)
+})
+
+// 暴露方法给父组件
+defineExpose({
+  saveScrollPosition,
+  restoreScrollPosition
 })
 
 // Cleanup would be good but currently HomeView is main view.

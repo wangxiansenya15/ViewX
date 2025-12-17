@@ -1,7 +1,7 @@
 <template>
   <div class="h-full w-full">
     <!-- Mobile Feed -->
-    <div v-if="isMobile" class="absolute inset-0 z-0 bg-black">
+    <div v-if="isMobile" class="absolute inset-0 z-0 bg-black transition-opacity duration-300" :style="{ opacity: feedOpacity }">
       <MobileFeed ref="mobileFeedRef" :videos="feedVideos" @open-comments="openComments" @load-more="handleLoadMore" />
     </div>
 
@@ -13,8 +13,8 @@
        </div>
        
        <!-- Feed Mode -->
-       <div v-else class="h-full w-full">
-           <DesktopFeed :videos="feedVideos" @load-more="handleLoadMore" />
+       <div v-else class="h-full w-full transition-opacity duration-300" :style="{ opacity: feedOpacity }">
+           <DesktopFeed ref="desktopFeedRef" :videos="feedVideos" @load-more="handleLoadMore" />
        </div>
     </div>
   </div>
@@ -38,8 +38,10 @@ const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
 const openCommentsAction = inject<(v: VideoVO) => void>('openComments')
 const openDesktopVideoAction = inject<(v: VideoVO) => void>('openDesktopVideo')
 
-// MobileFeed ref
+// Feed refs
 const mobileFeedRef = ref<InstanceType<typeof MobileFeed> | null>(null)
+const desktopFeedRef = ref<InstanceType<typeof DesktopFeed> | null>(null)
+const feedOpacity = ref(1)
 
 // View Mode
 const { viewMode } = useHomeViewMode()
@@ -175,27 +177,69 @@ onMounted(() => {
 // Keep-alive 生命周期钩子
 onActivated(() => {
   console.log('🟢🟢🟢 [HomeView] Component ACTIVATED 🟢🟢🟢')
-  // 恢复 MobileFeed 的滚动位置
-  if (mobileFeedRef.value && isMobile.value) {
-    console.log('🟢 [HomeView] Calling restoreScrollPosition in 50ms...')
-    // 使用 nextTick 确保 DOM 已更新,然后添加小延迟确保滚动容器已渲染
-    setTimeout(() => {
-      console.log('🟢 [HomeView] Now calling restoreScrollPosition')
-      mobileFeedRef.value?.restoreScrollPosition()
-    }, 50)
+  console.log('🟢 [HomeView] isMobile:', isMobile.value, 'viewMode:', viewMode.value)
+  
+  // 先设置为透明，防止闪烁
+  feedOpacity.value = 0
+  
+  if (isMobile.value) {
+    if (mobileFeedRef.value) {
+      console.log('🟢 [HomeView] Scheduling MobileFeed restore...')
+      // 使用 requestAnimationFrame 确保在下一帧（DOM 更新后）执行
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (mobileFeedRef.value) {
+             mobileFeedRef.value.restoreScrollPosition()
+             // 恢复位置后，恢复透明度
+             requestAnimationFrame(() => {
+               feedOpacity.value = 1
+             })
+          } else {
+             feedOpacity.value = 1 // Fallback
+          }
+        }, 100)
+      })
+    } else {
+      feedOpacity.value = 1
+    }
   } else {
-    console.warn('🟢 [HomeView] Cannot restore - mobileFeedRef:', !!mobileFeedRef.value, 'isMobile:', isMobile.value)
+    // PC Ref Logic
+    if (viewMode.value === 'feed') {
+      console.log('🟢 [HomeView] Scheduling DesktopFeed restore...')
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+           if (desktopFeedRef.value) {
+             desktopFeedRef.value.restoreScrollPosition()
+             requestAnimationFrame(() => {
+               feedOpacity.value = 1
+             })
+           } else {
+             console.warn('🟢 [HomeView] DesktopFeed ref missing for restore')
+             feedOpacity.value = 1
+           }
+        }, 150)
+      })
+    } else {
+      feedOpacity.value = 1
+    }
   }
 })
 
 onDeactivated(() => {
   console.log('🔴🔴🔴 [HomeView] Component DEACTIVATED 🔴🔴🔴')
-  // 保存 MobileFeed 的滚动位置
-  if (mobileFeedRef.value && isMobile.value) {
-    console.log('🔴 [HomeView] Calling saveScrollPosition')
-    mobileFeedRef.value.saveScrollPosition()
+  
+  // 离开时将透明度设为0，以便回来时从隐藏状态开始
+  feedOpacity.value = 0
+  
+  if (isMobile.value) {
+    if (mobileFeedRef.value) {
+      mobileFeedRef.value.saveScrollPosition()
+    }
   } else {
-    console.warn('🔴 [HomeView] Cannot save - mobileFeedRef:', !!mobileFeedRef.value, 'isMobile:', isMobile.value)
+    // Only save if in feed mode and ref exists
+    if (viewMode.value === 'feed' && desktopFeedRef.value) {
+      desktopFeedRef.value.saveScrollPosition()
+    }
   }
 })
 </script>

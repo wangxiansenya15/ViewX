@@ -21,10 +21,8 @@
     </div>
 
     <!-- Center Section: Search Bar (Desktop Only) -->
-    <div class="hidden md:flex flex-1 max-w-xl mx-8 relative group">
-      <input type="text" placeholder="搜索视频、UP主..."
-        class="w-full bg-[var(--bg)] border border-[var(--border)] rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-[var(--primary)] transition-all placeholder-[var(--muted)] text-[var(--text)] focus:ring-2 focus:ring-[var(--primary)]/20 shadow-sm">
-      <Search class="absolute left-3.5 top-2.5 w-4 h-4 text-[var(--muted)] group-focus-within:text-[var(--primary)] transition-colors" />
+    <div class="hidden md:flex flex-1 max-w-xl mx-8 relative group justify-center">
+       <SearchBar />
     </div>
 
     <!-- Right Section: User Actions -->
@@ -103,6 +101,8 @@ import { Search, Menu, User, Setting, SwitchButton, Management } from '@element-
 import { ElMessageBox } from 'element-plus'
 import { userApi, type UserProfileVO } from '@/api'
 import NotificationBell from './NotificationBell.vue'
+import SearchBar from './common/SearchBar.vue'
+
 
 const props = defineProps<{
   theme: 'light' | 'dark'

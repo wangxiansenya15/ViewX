@@ -36,10 +36,9 @@
       </p>
 
       <!-- 用户信息 -->
-      <div class="flex items-center gap-2 mt-0.5">
+      <div class="flex items-center gap-2 mt-0.5 cursor-pointer hover:opacity-80 transition-opacity" @click.stop="goToProfile">
         <img v-if="showAvatar" :src="video.uploaderAvatar" class="w-6 h-6 rounded-full border border-white/10 bg-gray-800 object-cover shrink-0">
         <span v-if="showAvatar" class="text-xs text-[var(--muted)] font-medium hover:text-[var(--text)] transition-colors">{{ video.uploaderNickname }}</span>
-        <!-- 只有在不显示头像的模式下（如个人页），且需要显示观看数时才显示观看数？或者根据设计决定。但用户只要名字和描述。-->
       </div>
     </div>
   </div>
@@ -49,6 +48,9 @@
 <script setup lang="ts">
 import { Play } from 'lucide-vue-next'
 import type { VideoVO } from '@/api'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const formatDuration = (seconds: number) => {
   const m = Math.floor(seconds / 60)
@@ -56,7 +58,15 @@ const formatDuration = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-withDefaults(defineProps<{
+const goToProfile = (e: Event) => {
+    e.stopPropagation()
+    // 假设 uploaderId 是 number, 路由参数通常接受 string | number
+    if (props.video.uploaderId) {
+        router.push(`/profile/${props.video.uploaderId}`)
+    }
+}
+
+const props = withDefaults(defineProps<{
   video: VideoVO
   showAvatar?: boolean
 }>(), {

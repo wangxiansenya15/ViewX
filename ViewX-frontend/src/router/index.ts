@@ -16,12 +16,18 @@ const router = createRouter({
         {
             path: '/search',
             name: 'search',
-            component: MobileSearch,
+            component: () => import('../views/SearchResults.vue'),
             meta: { keepAlive: true }
         },
         {
             path: '/profile',
             name: 'profile',
+            component: ProfileView,
+            meta: { keepAlive: true }
+        },
+        {
+            path: '/profile/:userId',
+            name: 'user-profile',
             component: ProfileView,
             meta: { keepAlive: true }
         },

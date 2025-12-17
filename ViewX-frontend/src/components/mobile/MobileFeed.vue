@@ -116,25 +116,21 @@ const restoreScrollPosition = () => {
     console.log('🟢 [MobileFeed] Removed scroll-smooth for instant jump')
   }
   
-  // 使用 requestAnimationFrame 确保在下一帧渲染时执行
-  requestAnimationFrame(() => {
-    if (containerRef.value) {
-      console.log('🟢 [MobileFeed] Setting scrollTop from', containerRef.value.scrollTop, 'to', savedScrollTop)
-      containerRef.value.scrollTop = savedScrollTop
-      currentIndex.value = savedCurrentIndex
-      console.log('🟢 [MobileFeed] RESTORED - actual scrollTop:', containerRef.value.scrollTop, 'currentIndex:', currentIndex.value)
-      
-      // 恢复 scroll-smooth 类
-      if (hadSmoothScroll) {
-        setTimeout(() => {
-          if (containerRef.value) {
-            containerRef.value.classList.add('scroll-smooth')
-            console.log('🟢 [MobileFeed] Restored scroll-smooth')
-          }
-        }, 100)
+  // 立即设置滚动位置，不等待 requestAnimationFrame
+  console.log('🟢 [MobileFeed] Setting scrollTop from', containerRef.value.scrollTop, 'to', savedScrollTop)
+  containerRef.value.scrollTop = savedScrollTop
+  currentIndex.value = savedCurrentIndex
+  console.log('🟢 [MobileFeed] RESTORED - actual scrollTop:', containerRef.value.scrollTop, 'currentIndex:', currentIndex.value)
+  
+  // 恢复 scroll-smooth 类
+  if (hadSmoothScroll) {
+    setTimeout(() => {
+      if (containerRef.value) {
+        containerRef.value.classList.add('scroll-smooth')
+        console.log('🟢 [MobileFeed] Restored scroll-smooth')
       }
-    }
-  })
+    }, 100)
+  }
 }
 
 defineExpose({

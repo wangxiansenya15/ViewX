@@ -103,7 +103,7 @@
                     </svg>
                     分享
                   </button>
-                  <button @click="openEditModal" class="px-4 py-2 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-[var(--text)] transition-colors flex items-center gap-2" title="编辑资料">
+                  <button v-if="isOwnProfile" @click="openEditModal" class="px-4 py-2 rounded-full bg-gray-500/10 hover:bg-gray-500/20 text-[var(--text)] transition-colors flex items-center gap-2" title="编辑资料">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
@@ -114,11 +114,11 @@
               
               <!-- Stats -->
               <div class="flex items-center gap-8 mt-8 border-t border-gray-500/20 pt-6 justify-center md:justify-start">
-                <div class="text-center md:text-left">
+                <div class="text-center md:text-left cursor-pointer hover:opacity-80 transition-opacity" @click="openFollowing">
                   <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followingCount || 0) }}</span>
                   <span class="text-sm text-gray-500">关注</span>
                 </div>
-                <div class="text-center md:text-left">
+                <div class="text-center md:text-left cursor-pointer hover:opacity-80 transition-opacity" @click="openFollowers">
                   <span class="text-xl font-bold text-[var(--text)] mr-1">{{ formatNumber(profile?.followersCount || 0) }}</span>
                   <span class="text-sm text-gray-500">粉丝</span>
                 </div>
@@ -265,15 +265,26 @@
         </div>
       </div>
     </div>
+
+
+    <!-- User List Modal -->
+    <UserListModal
+      v-model:visible="showUserListModal"
+      :title="userListTitle"
+      :type="userListType"
+      :userId="profile?.userId || 0"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineComponent, reactive } from 'vue'
+import { ref, onMounted, defineComponent, reactive, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { userApi, videoApi, interactionApi, type UserProfileVO, type VideoVO } from '@/api'
 import { useI18n } from 'vue-i18n'
 import { Grid, Heart, Bookmark, History, Lock, Trash, Edit2 } from 'lucide-vue-next'
 import VideoCard from '@/components/VideoCard.vue'
+import UserListModal from '@/components/UserListModal.vue'
 
 // 定义组件名称,用于 keep-alive
 defineOptions({
@@ -285,6 +296,7 @@ const emit = defineEmits(['open-video'])
 import { inject, type Ref } from 'vue'
 const openVideoDetail = inject<(v: VideoVO) => void>('openDesktopVideo')
 const isLoggedIn = inject<Ref<boolean>>('isLoggedIn')
+const route = useRoute()
 
 // Helper component for empty states
 const EmptyState = defineComponent({
@@ -308,6 +320,11 @@ const error = ref('')
 const profile = ref<UserProfileVO | null>(null)
 const defaultAvatar = 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'
 
+// 判断是否是当前用户自己的主页
+const isOwnProfile = computed(() => {
+  return !route.params.userId
+})
+
 // Tabs
 const activeTab = ref('works')
 const tabs = reactive([
@@ -327,7 +344,28 @@ const saving = ref(false)
 const editForm = ref<Partial<UserProfileVO>>({})
 const fileInput = ref<HTMLInputElement | null>(null)
 
+// UserListModal state
+const showUserListModal = ref(false)
+const userListTitle = ref('')
+const userListType = ref<'followers' | 'following'>('followers')
+
+const openFollowers = () => {
+    if (!profile.value?.userId) return
+    userListTitle.value = '粉丝列表'
+    userListType.value = 'followers'
+    showUserListModal.value = true
+}
+
+const openFollowing = () => {
+    if (!profile.value?.userId) return
+    userListTitle.value = '关注列表'
+    userListType.value = 'following'
+    showUserListModal.value = true
+}
+
+
 const triggerAvatarUpload = () => {
+  if (!isOwnProfile.value) return // 只有自己的主页才能上传头像
   fileInput.value?.click()
 }
 
@@ -364,8 +402,18 @@ const fetchProfile = async () => {
   loading.value = true
   error.value = ''
   try {
-    const res = await userApi.getMyProfile()
-    profile.value = res
+    const userId = route.params.userId as string
+    
+    // 如果有 userId 参数，获取指定用户的信息；否则获取当前用户信息
+    if (userId) {
+      // 直接传递字符串，避免 Number() 转换导致的精度丢失
+      const res = await userApi.getUserProfile(userId)
+      profile.value = res
+    } else {
+      const res = await userApi.getMyProfile()
+      profile.value = res
+    }
+    
     // Update tab counts if available
     tabs[0].count = profile.value?.videoCount
 
@@ -380,6 +428,19 @@ const fetchProfile = async () => {
         console.error('Failed to fetch follow stats:', err)
       }
     }
+    
+    // 从 profile 中获取视频列表（后端已经包含了）
+    if (profile.value?.videos) {
+      userVideos.value = profile.value.videos
+    }
+    
+    // Mock history (历史记录接口暂未实现，使用推荐流模拟)
+    try {
+      const feed = await videoApi.getFeed()
+      historyVideos.value = feed.slice(0, 4)
+    } catch (e) {
+      console.error('Failed to fetch history:', e)
+    }
 
   } catch (err) {
     console.error('Failed to fetch profile:', err)
@@ -389,19 +450,11 @@ const fetchProfile = async () => {
   }
 }
 
+// fetchContent 函数已经不需要了，因为视频列表已经包含在 profile 中
+// 保留这个函数是为了兼容性，但它现在什么都不做
 const fetchContent = async () => {
-    // Fetch user videos (works)
-    try {
-        // 使用真实接口获取我的视频
-        const res = await videoApi.getMyVideos()
-        userVideos.value = res
-        
-        // Mock history (历史记录接口暂未实现，使用推荐流模拟)
-        const feed = await videoApi.getFeed()
-        historyVideos.value = feed.slice(0, 4)
-    } catch(e) {
-        console.error("Failed to fetch content", e)
-    }
+  // 视频列表已经在 fetchProfile 中获取了
+  // 这个函数保留是为了不破坏现有的调用
 }
 
 const openEditModal = () => {
@@ -481,6 +534,14 @@ onMounted(() => {
     fetchContent()
   } else {
     loading.value = false
+  }
+})
+
+// 监听路由参数变化，重新加载用户信息
+watch(() => route.params.userId, () => {
+  if (isLoggedIn?.value) {
+    fetchProfile()
+    fetchContent()
   }
 })
 </script>

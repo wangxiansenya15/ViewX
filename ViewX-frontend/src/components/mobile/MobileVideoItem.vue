@@ -58,12 +58,16 @@
     <!-- Right Sidebar (Actions) -->
     <div class="absolute bottom-[110px] right-2 flex flex-col items-center gap-5 pointer-events-auto pb-safe z-40">
        <!-- Avatar -->
-       <div class="relative mb-3 group active:scale-95 transition-transform" @click.stop>
+       <!-- Avatar -->
+       <div class="relative mb-3 group active:scale-95 transition-transform" @click.stop="goToProfile">
          <div class="w-12 h-12 rounded-full border border-white/50 p-0.5 overflow-hidden">
             <img :src="video.uploaderAvatar" class="w-full h-full rounded-full object-cover" />
          </div>
-         <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-white">
+         <div v-if="!isFollowing" @click.stop="toggleFollow" class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-white transition-all hover:scale-110 cursor-pointer">
             <Plus class="w-3 h-3 text-white" />
+         </div>
+         <div v-else class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md rounded-full w-5 h-5 flex items-center justify-center border border-white/50 transition-all opacity-0 group-hover:opacity-100">
+             <Check class="w-3 h-3 text-white" />
          </div>
        </div>
 
@@ -116,8 +120,9 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import { Plus, Heart, MessageCircle, Star, Share2, Play, Music } from 'lucide-vue-next'
+import { Plus, Heart, MessageCircle, Star, Share2, Play, Music, Check } from 'lucide-vue-next'
 import { interactionApi, type VideoVO } from '@/api'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
   video: VideoVO
@@ -125,6 +130,7 @@ const props = defineProps<{
   forceContain?: boolean
 }>()
 
+const router = useRouter()
 const videoRef = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const isLoading = ref(false)
@@ -132,6 +138,7 @@ const isLoading = ref(false)
 // Interaction States
 const isLiked = ref((props.video as any).isLiked || false)
 const isFavorited = ref((props.video as any).isFavorited || false)
+const isFollowing = ref(false) // 默认为未关注
 
 const showMusicInfo = ref(false)
 let musicInfoTimeout: any = null
@@ -149,11 +156,35 @@ let heartIdCounter = 0
 // Fetch interaction status when active or mounted
 const fetchInteractionStatus = async () => {
     try {
+        // Fetch like/favorite status
         const res = await interactionApi.getStatus(props.video.id)
         isLiked.value = res.liked
         isFavorited.value = res.favorited
+        
+        // Fetch follow status using uploaderId
+        if (props.video.uploaderId) {
+             const followRes = await interactionApi.getDetailedFollowStatus(props.video.uploaderId)
+             isFollowing.value = followRes.isFollowing
+        }
     } catch (e) {
         // console.error('Failed to fetch status', e)
+    }
+}
+
+const goToProfile = () => {
+    // 假设 uploaderId 是 number, 路由参数通常接受 string | number
+    if (props.video.uploaderId) {
+        router.push(`/profile/${props.video.uploaderId}`)
+    }
+}
+
+const toggleFollow = async () => {
+    try {
+        await interactionApi.toggleFollow(props.video.uploaderId)
+        isFollowing.value = !isFollowing.value
+        // ElMessage? Maybe not needed for quick action like this, or use simple alert/toast if available
+    } catch (e) {
+        console.error('Follow failed', e)
     }
 }
 
