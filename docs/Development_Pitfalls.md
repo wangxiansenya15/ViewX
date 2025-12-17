@@ -167,3 +167,74 @@ JWT 是无状态的，用户登出后 Token 依然有效，存在安全隐患。
 
 ### 最佳实践
 - **安全性与性能平衡**：虽然 JWT 旨在无状态，但在需要高安全性的场景（如注销、修改密码）下，引入轻量级的状态检查（Redis）是必要的权衡。
+
+---
+
+## 6. 雪花算法 ID 精度丢失陷阱
+
+### 6.1 问题现象
+前端在处理 ID（如 `userId`, `videoId` 等）时，偶尔会出现"用户不存在"或"资源未找到"的错误，或者在比较 ID 时出现莫名其妙的不相等。
+*   后端 ID: `1765954897000123456`
+*   前端 ID: `1765954897000123400` (末尾两位变了)
+
+### 6.2 深度原因分析
+后端使用 Twitter 的 **Snowflake (雪花算法)** 生成 ID，这是一个 **64 位 (long)** 的整数。
+JavaScript 的 `Number` 类型遵循 IEEE 754 标准，使用 **64 位双精度浮点数** 存储，其中只有 **53 位** 用于表示有效整数。
+
+*   **Java `long` 最大值**: `9,223,372,036,854,775,807` (2^63 - 1)
+*   **JS `Number` 最大安全值**: `9,007,199,254,740,991` (2^53 - 1)
+
+当后端返回的 ID 大于 JS 的最大安全整数时，JS 会丢失精度，通常表现为末尾几位数字变成 0 或其他数字。
+
+### 6.3 解决方案
+
+#### 方案一：后端统一转字符串 (推荐)
+配置 Jackson 序列化器，将所有 `Long` 类型字段在序列化为 JSON 时自动转换为 `String`。
+
+```java
+// Spring Boot 配置
+@Configuration
+public class JacksonConfig {
+    @Bean
+    public Jackson2ObjectMapperBuilderCustomizer jacksonCustomizer() {
+        return builder -> {
+            builder.serializerByType(Long.class, ToStringSerializer.instance);
+            builder.serializerByType(Long.TYPE, ToStringSerializer.instance);
+        };
+    }
+}
+```
+
+#### 方案二：前端防御性编程 (必须遵守)
+如果后端没有全局转换，前端必须采取防御措施：
+
+1.  **禁止使用 parseInt**:
+    ```typescript
+    // ❌ 错误：立即丢失精度
+    const id = parseInt("1765954897000123456"); 
+    
+    // ✅ 正确：保持字符串
+    const id = "1765954897000123456";
+    ```
+
+2.  **DTO/VO 定义使用 String**:
+    在 TypeScript 接口定义中，ID 字段优先定义为 `string`。
+    ```typescript
+    interface UserVO {
+        userId: string; // 推荐
+        // userId: number; // 危险
+    }
+    ```
+
+3.  **路由参数处理**:
+    ```typescript
+    // ❌ 错误
+    router.push({ query: { id: 1234567890123456789 } });
+    
+    // ✅ 正确
+    router.push({ query: { id: "1234567890123456789" } });
+    ```
+
+### 6.4 最佳实践总结
+*   **后端**: 默认开启 `Long` -> `String` 的序列化转换，彻底根除此类问题。
+*   **前端**: 凡是涉及 ID 的地方，**全部当作字符串处理**，禁止进行数值运算或转换。
