@@ -143,6 +143,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.equals("/swagger-ui.html") ||
                 path.startsWith("/oauth2/") ||
                 path.startsWith("/login") || // 匹配 /login 和 /login/xxx
+                path.startsWith("/ws") || // WebSocket handshake
                 path.equals("/favicon.ico") ||
                 path.equals("/error");
 

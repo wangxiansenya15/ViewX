@@ -12,6 +12,7 @@ import com.flowbrain.viewx.pojo.vo.CommentVO;
 import com.flowbrain.viewx.pojo.vo.UserSummaryVO;
 import com.flowbrain.viewx.service.EventPublisher;
 import com.flowbrain.viewx.service.InteractionService;
+import com.flowbrain.viewx.service.NotificationProducerService;
 import com.flowbrain.viewx.service.RecommendService;
 import com.flowbrain.viewx.service.StorageStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +57,9 @@ public class InteractionServiceImpl implements InteractionService {
     @Autowired
     private StorageStrategy storageStrategy;
 
+    @Autowired
+    private NotificationProducerService notificationProducerService;
+
     // ==================== 点赞相关 ====================
 
     @Override
@@ -70,6 +74,13 @@ public class InteractionServiceImpl implements InteractionService {
             interactionMapper.insertLike(userId, videoId);
             interactionMapper.incrementVideoLikeCount(videoId);
             eventPublisher.publishLikeEvent(userId, videoId, true);
+
+            // Send like notification to video owner
+            Long videoOwnerId = interactionMapper.getVideoOwnerId(videoId);
+            if (videoOwnerId != null) {
+                notificationProducerService.sendLikeNotification(videoOwnerId, userId, videoId);
+            }
+
             return Result.success("点赞成功");
         }
     }
@@ -91,6 +102,13 @@ public class InteractionServiceImpl implements InteractionService {
             interactionMapper.insertFavorite(userId, videoId);
             eventPublisher.publishFavoriteEvent(userId, videoId);
             recommendService.updateVideoScore(videoId);
+
+            // Send favorite notification to video owner
+            Long videoOwnerId = interactionMapper.getVideoOwnerId(videoId);
+            if (videoOwnerId != null) {
+                notificationProducerService.sendFavoriteNotification(videoOwnerId, userId, videoId);
+            }
+
             return Result.success("收藏成功");
         }
     }
@@ -125,6 +143,13 @@ public class InteractionServiceImpl implements InteractionService {
 
             // 发布评论事件（异步通知、统计等）
             eventPublisher.publishCommentEvent(userId, dto.getVideoId(), comment.getId(), dto.getContent());
+
+            // Send comment notification to video owner
+            Long videoOwnerId = interactionMapper.getVideoOwnerId(dto.getVideoId());
+            if (videoOwnerId != null) {
+                notificationProducerService.sendCommentNotification(
+                        videoOwnerId, userId, dto.getVideoId(), comment.getId(), dto.getContent());
+            }
 
             // 转换为 VO 返回
             CommentVO vo = convertToCommentVO(comment, userId);
@@ -212,6 +237,10 @@ public class InteractionServiceImpl implements InteractionService {
             follow.setCreatedAt(LocalDateTime.now());
             followMapper.insertFollow(follow);
             eventPublisher.publishFollowEvent(followerId, followedId, true);
+
+            // Send follow notification
+            notificationProducerService.sendFollowNotification(followedId, followerId);
+
             return Result.success("关注成功");
         }
     }

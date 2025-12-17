@@ -30,8 +30,13 @@ public interface InteractionMapper {
 
     @Select("SELECT COUNT(*) FROM vx_video_favorites WHERE user_id = #{userId} AND video_id = #{videoId}")
     int checkFavorite(@Param("userId") Long userId, @Param("videoId") Long videoId);
-    
-    // Note: Video table doesn't have favorite_count in the schema provided earlier, 
-    // but usually we might want to track it. Assuming we only track likes/views/comments for now based on schema.
+
+    // --- Video Owner ---
+    @Select("SELECT uploader_id FROM vx_videos WHERE id = #{videoId}")
+    Long getVideoOwnerId(@Param("videoId") Long videoId);
+
+    // Note: Video table doesn't have favorite_count in the schema provided earlier,
+    // but usually we might want to track it. Assuming we only track
+    // likes/views/comments for now based on schema.
     // If needed, we can add favorite_count to vx_videos later.
 }

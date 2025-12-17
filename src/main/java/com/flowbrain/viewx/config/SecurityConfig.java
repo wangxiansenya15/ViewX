@@ -63,7 +63,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**",
                                 "/recommend/**",
-                                "/users/search")
+                                "/users/search",
+                                "/ws/**") // Allow WebSocket handshake
 
                         .permitAll()
                         // 允许匿名访问视频详情和交互状态
@@ -74,7 +75,7 @@ public class SecurityConfig {
                         .permitAll()
                         // 角色权限控制
                         .requestMatchers("/comments/**", "/user/**", "/avatar/**", "/payment/**", "/msg/**",
-                                "/videos/**", "/interactions/**", "/notifications/**", "/messages/**", "/ws/**")
+                                "/videos/**", "/interactions/**", "/notifications/**", "/messages/**")
                         .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
                         .requestMatchers("/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         // 其他请求需要认证
