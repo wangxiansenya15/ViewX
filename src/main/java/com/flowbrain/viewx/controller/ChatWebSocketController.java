@@ -82,7 +82,7 @@ public class ChatWebSocketController {
             Result<MessageVO> result = chatService.sendMessage(senderId, messageDTO);
             log.info("消息保存结果: code={}, message={}", result.getCode(), result.getMessage());
 
-            if (result.getCode() == 200) {
+            if (result.getCode() == Result.OK) {
                 MessageVO messageVO = result.getData();
                 log.info("消息VO: {}", messageVO);
 
@@ -148,7 +148,7 @@ public class ChatWebSocketController {
                 String username = principal.getName();
                 java.util.Map<String, Object> errorResponse = new java.util.HashMap<>();
                 errorResponse.put("type", "error");
-                errorResponse.put("code", 500);
+                errorResponse.put("code", Result.SERVER_ERROR);
                 errorResponse.put("message", "消息发送失败: " + e.getMessage());
                 errorResponse.put("timestamp", java.time.LocalDateTime.now());
 

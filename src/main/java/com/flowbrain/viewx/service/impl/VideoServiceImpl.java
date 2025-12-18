@@ -1,11 +1,13 @@
 package com.flowbrain.viewx.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.flowbrain.viewx.common.Result;
 import com.flowbrain.viewx.dao.UserMapper;
 import com.flowbrain.viewx.dao.VideoMapper;
 import com.flowbrain.viewx.pojo.dto.VideoUploadDTO;
 import com.flowbrain.viewx.pojo.dto.VideoUpdateDTO;
 import com.flowbrain.viewx.pojo.entity.User;
+import com.flowbrain.viewx.pojo.entity.UserDetail;
 import com.flowbrain.viewx.pojo.entity.Video;
 import com.flowbrain.viewx.pojo.vo.VideoDetailVO;
 import com.flowbrain.viewx.service.InteractionService;
@@ -83,7 +85,7 @@ public class VideoServiceImpl implements VideoService {
             }
 
             // 获取 UserDetail (avatar)
-            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.flowbrain.viewx.pojo.entity.UserDetail> query = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            QueryWrapper<UserDetail> query = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
             query.eq("user_id", video.getUploaderId());
             com.flowbrain.viewx.pojo.entity.UserDetail detail = userDetailMapper.selectOne(query);
 
@@ -279,8 +281,20 @@ public class VideoServiceImpl implements VideoService {
             video.setUploaderId(userId);
             video.setCreatedAt(LocalDateTime.now());
             video.setUpdatedAt(LocalDateTime.now());
-            video.setPublishedAt(LocalDateTime.now()); // 默认立即发布
-            video.setStatus("APPROVED"); // 默认审核通过，实际应为 PENDING
+
+            // 根据用户角色设置审核状态
+            // 管理员和超级管理员发布的视频自动通过审核
+            User uploader = userMapper.selectById(userId);
+            if (uploader != null &&
+                    (uploader.getRole() == com.flowbrain.viewx.common.enums.Role.ADMIN ||
+                            uploader.getRole() == com.flowbrain.viewx.common.enums.Role.SUPER_ADMIN)) {
+                video.setStatus("APPROVED"); // 管理员视频自动通过
+                video.setPublishedAt(LocalDateTime.now()); // 立即发布
+                log.info("管理员/超级管理员上传视频，自动通过审核，用户ID: {}, 角色: {}", userId, uploader.getRole());
+            } else {
+                video.setStatus("PENDING"); // 普通用户和审核员需要审核
+                log.info("普通用户上传视频，等待审核，用户ID: {}", userId);
+            }
 
             // 设置封面和缩略图
             if (coverUrl != null) {

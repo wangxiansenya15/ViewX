@@ -9,6 +9,7 @@ import com.flowbrain.viewx.dao.UserMapper;
 import com.flowbrain.viewx.dao.VideoMapper;
 import com.flowbrain.viewx.pojo.entity.UserDetail;
 import com.flowbrain.viewx.pojo.entity.Video;
+import com.flowbrain.viewx.pojo.vo.VideoListVO;
 import com.flowbrain.viewx.service.RecommendService;
 import com.flowbrain.viewx.service.StorageStrategy;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +42,7 @@ public class RecommendServiceImpl implements RecommendService {
     private StorageStrategy storageStrategy;
 
     @Override
-    public List<com.flowbrain.viewx.pojo.vo.VideoListVO> getTrendingVideos(int page, int size) {
+    public List<VideoListVO> getTrendingVideos(int page, int size) {
         int offset = (page - 1) * size;
         String cacheKey = RedisKeyConstants.Recommend.getTrendingKey() + ":page:" + page + ":size:" + size;
 

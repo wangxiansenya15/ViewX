@@ -323,7 +323,8 @@ public class InteractionServiceImpl implements InteractionService {
         // 填充用户信息
         User user = userMapper.selectById(comment.getUserId());
         if (user != null) {
-            vo.setUserNickname(user.getNickname() != null ? user.getNickname() : user.getUsername());
+            vo.setUsername(user.getUsername());
+            vo.setNickname(user.getNickname() != null ? user.getNickname() : user.getUsername());
 
             // 获取头像
             QueryWrapper<UserDetail> detailQuery = new QueryWrapper<>();
@@ -331,9 +332,9 @@ public class InteractionServiceImpl implements InteractionService {
             UserDetail detail = userDetailMapper.selectOne(detailQuery);
             if (detail != null && detail.getAvatarUrl() != null) {
                 if (!detail.getAvatarUrl().startsWith("http")) {
-                    vo.setUserAvatar(storageStrategy.getFileUrl(detail.getAvatarUrl()));
+                    vo.setAvatar(storageStrategy.getFileUrl(detail.getAvatarUrl()));
                 } else {
-                    vo.setUserAvatar(detail.getAvatarUrl());
+                    vo.setAvatar(detail.getAvatarUrl());
                 }
             }
         }

@@ -36,21 +36,22 @@ public class CommentController {
     @PostMapping("/{videoId}")
     public Result<?> addComment(@PathVariable Long videoId, @RequestBody Map<String, Object> payload) {
         Long userId = getCurrentUserId();
-        if (userId == null) return Result.unauthorized("Unauthorized");
-        
+        if (userId == null)
+            return Result.unauthorized("Unauthorized");
+
         String content = (String) payload.get("content");
         Long parentId = payload.containsKey("parentId") ? ((Number) payload.get("parentId")).longValue() : null;
-        
+
         return commentService.addComment(userId, videoId, content, parentId);
     }
 
     @GetMapping("/{videoId}")
-    public Result<List<VideoComment>> getComments(@PathVariable Long videoId) {
+    public Result<List<com.flowbrain.viewx.pojo.vo.CommentVO>> getComments(@PathVariable Long videoId) {
         return commentService.getComments(videoId);
     }
 
     @GetMapping("/replies/{parentId}")
-    public Result<List<VideoComment>> getReplies(@PathVariable Long parentId) {
+    public Result<List<com.flowbrain.viewx.pojo.vo.CommentVO>> getReplies(@PathVariable Long parentId) {
         return commentService.getReplies(parentId);
     }
 }
