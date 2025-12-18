@@ -14,55 +14,53 @@
                 @scroll="handleScroll"
               >
                 <div v-for="(video, index) in videos" :key="video.id" class="w-full h-full snap-start shrink-0">
-                    <MobileVideoItem 
+                    <DesktopVideoItem 
                        :video="video" 
                        :isActive="currentIndex === index"
+                       :isFirst="index === 0"
+                       :isLast="index === videos.length - 1"
                        force-contain
-                       @open-comments="showComments = true" 
+                       @open-comments="openComments"
+                       @prev="scrollToIndex(currentIndex - 1)"
+                       @next="scrollToIndex(currentIndex + 1)"
                     />
                 </div>
               </div>
            </div>
        </div>
 
-       <!-- Desktop Navigation Controls (Floating) -->
-       <div class="absolute right-8 bottom-8 flex flex-col gap-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-           <button 
-             @click="scrollToIndex(currentIndex - 1)" 
-             :disabled="currentIndex === 0"
-             class="p-3 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-           >
-              <ChevronUp class="w-6 h-6" />
-           </button>
-           <button 
-             @click="scrollToIndex(currentIndex + 1)" 
-             :disabled="currentIndex >= videos.length - 1"
-             class="p-3 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-           >
-              <ChevronDown class="w-6 h-6" />
-           </button>
-       </div>
+       <!-- Desktop Navigation Controls (Removed, moved to VideoItem) -->
     </div>
 
     <!-- Right Side Comment Panel -->
     <transition name="slide-right">
         <div v-if="showComments" class="w-[400px] h-full border-l border-white/10 bg-[#161616] shrink-0 z-20">
-            <DesktopCommentPanel @close="showComments = false" />
+            <DesktopCommentPanel 
+                :videoId="activeVideoId"
+                @close="showComments = false" 
+            />
         </div>
     </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
-import { ChevronUp, ChevronDown } from 'lucide-vue-next'
-import MobileVideoItem from '../mobile/MobileVideoItem.vue'
+import { ref, watch, onMounted, computed } from 'vue'
+import DesktopVideoItem from './DesktopVideoItem.vue'
 import DesktopCommentPanel from './DesktopCommentPanel.vue'
 import type { VideoVO } from '@/api'
 
 const props = defineProps<{
   videos: VideoVO[]
 }>()
+
+const activeVideoId = computed(() => {
+    const id = (props.videos.length > 0 && currentIndex.value >= 0 && currentIndex.value < props.videos.length) 
+        ? props.videos[currentIndex.value].id 
+        : 0
+    console.log('[DesktopFeed] activeVideoId:', id, 'currentIndex:', currentIndex.value, 'videos.length:', props.videos.length)
+    return id
+})
 
 const emit = defineEmits(['load-more'])
 
@@ -110,6 +108,16 @@ const scrollToIndex = (index: number) => {
     top: index * clientHeight,
     behavior: 'smooth'
   })
+}
+
+const openComments = () => {
+  console.log('[DesktopFeed] Opening comments, activeVideoId:', activeVideoId.value, 'videos:', props.videos.length)
+  if (activeVideoId.value === 0) {
+    console.warn('[DesktopFeed] Cannot open comments: videoId is 0')
+    alert('视频还在加载中，请稍后再试')
+    return
+  }
+  showComments.value = true
 }
 
 // Reset loadMore state

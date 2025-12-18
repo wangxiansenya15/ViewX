@@ -362,6 +362,38 @@ export const interactionApi = {
     }
 }
 
+// 评论 API
+export const commentApi = {
+    // 获取视频评论
+    getComments(videoId: number) {
+        return request.get<CommentVO[]>(`/comments/${videoId}`)
+    },
+
+    // 获取评论回复
+    getReplies(parentId: number) {
+        return request.get<CommentVO[]>(`/comments/replies/${parentId}`)
+    },
+
+    // 添加评论
+    addComment(videoId: number, content: string, parentId?: number) {
+        return request.post<void>(`/comments/${videoId}`, { content, parentId })
+    }
+}
+
+export interface CommentVO {
+    id: number
+    userId: number
+    username: string
+    nickname: string
+    avatar: string
+    content: string
+    createdAt: string
+    likeCount: number
+    replyCount: number
+    isLiked: boolean
+    replies?: CommentVO[]
+}
+
 // 搜索 API
 export const search = {
     // 搜索用户
@@ -419,7 +451,72 @@ export const adminApi = {
     // 管理员更新用户状态
     updateUserStatus(userId: number, status: string) {
         return request.patch<void>(`/admin/users/${userId}/status`, { status })
+    },
+
+    // ==================== 视频审核相关 ====================
+
+    // 获取待审核视频列表
+    getPendingVideos(page = 1, size = 20) {
+        return request.get<VideoReviewVO[]>('/admin/videos/pending', { params: { page, size } })
+    },
+
+    // 获取所有视频列表（可按状态筛选）
+    getAllVideos(status?: string, page = 1, size = 20) {
+        return request.get<VideoReviewVO[]>('/admin/videos', {
+            params: { status, page, size }
+        })
+    },
+
+    // 审核通过视频
+    approveVideo(videoId: number) {
+        return request.post<string>(`/admin/videos/${videoId}/approve`)
+    },
+
+    // 拒绝视频
+    rejectVideo(videoId: number, reason?: string) {
+        return request.post<string>(`/admin/videos/${videoId}/reject`, {
+            reason: reason || '内容不符合平台规范'
+        })
+    },
+
+    // 删除视频（管理员权限）
+    deleteVideoAsAdmin(videoId: number) {
+        return request.delete<string>(`/admin/videos/${videoId}`)
     }
+}
+
+// 视频审核 VO
+export interface VideoReviewVO {
+    id: number
+    title: string
+    description?: string
+    videoUrl: string
+    thumbnailUrl?: string
+    coverUrl?: string
+    duration: number
+    category?: string
+    subcategory?: string
+    tags?: string[]
+
+    // 上传者信息
+    uploaderId: number
+    uploaderUsername: string
+    uploaderNickname: string
+    uploaderAvatar?: string
+
+    // 审核相关
+    status: 'PENDING' | 'APPROVED' | 'REJECTED'
+    visibility: string
+
+    // 统计信息
+    viewCount: number
+    likeCount: number
+    commentCount: number
+
+    // 时间信息
+    createdAt: string
+    publishedAt?: string
+    updatedAt: string
 }
 
 // 内容相关 API (图片、图片集)

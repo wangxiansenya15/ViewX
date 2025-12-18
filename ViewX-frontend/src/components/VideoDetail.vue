@@ -231,11 +231,74 @@
            </div>
         </div>
 
-        <!-- Comments Placeholder -->
+        <!-- Comments Section -->
         <div>
-           <h3 class="font-bold mb-4">评论 ({{ content.commentCount }})</h3>
-           <div class="text-center py-8 text-gray-500 text-sm bg-white/5 rounded-xl border border-white/5 border-dashed">
-              评论功能开发中...
+           <h3 class="font-bold mb-4">评论 ({{ formatNumber(totalComments) }})</h3>
+           
+           <!-- Comment Input -->
+           <div class="mb-6 flex gap-3">
+              <div class="w-8 h-8 rounded-full bg-gray-700 shrink-0 overflow-hidden">
+                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=User" class="w-full h-full object-cover" />
+              </div>
+              <div class="flex-1 flex gap-2">
+                 <input 
+                   v-model="commentInput"
+                   type="text" 
+                   placeholder="留下你的精彩评论..." 
+                   class="flex-1 bg-white/5 rounded-full px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:bg-white/10 transition-colors"
+                   @keyup.enter="submitComment"
+                 />
+                 <button 
+                   @click="submitComment"
+                   :disabled="!commentInput.trim() || submittingComment || !content?.id"
+                   class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-full text-sm font-bold transition-colors"
+                 >
+                    发送
+                 </button>
+              </div>
+           </div>
+
+           <!-- Comments List -->
+           <div v-if="loadingComments" class="text-center py-8 text-gray-500 text-sm">
+              加载评论中...
+           </div>
+           <div v-else-if="comments.length === 0" class="text-center py-8 text-gray-500 text-sm bg-white/5 rounded-xl border border-white/5">
+              暂无评论，快来抢沙发
+           </div>
+           <div v-else class="space-y-4">
+              <div v-for="comment in comments" :key="comment.id" class="flex gap-3">
+                 <!-- Avatar -->
+                 <div class="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10">
+                    <img :src="comment.avatar" class="w-full h-full object-cover" />
+                 </div>
+                 
+                 <div class="flex-1">
+                    <!-- User & Time -->
+                    <div class="flex items-center gap-2 mb-1">
+                       <span class="text-xs font-bold text-gray-300">{{ comment.nickname || comment.username }}</span>
+                       <span class="text-[10px] text-gray-500">{{ formatCommentTime(comment.createdAt) }}</span>
+                    </div>
+                    
+                    <!-- Content -->
+                    <p class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">{{ comment.content }}</p>
+                    
+                    <!-- Replies -->
+                    <div v-if="comment.replies && comment.replies.length > 0" class="mt-3 space-y-2 pl-3 border-l-2 border-white/10">
+                       <div v-for="reply in comment.replies" :key="reply.id" class="flex gap-2">
+                          <div class="w-6 h-6 rounded-full overflow-hidden shrink-0">
+                             <img :src="reply.avatar" class="w-full h-full object-cover" />
+                          </div>
+                          <div class="flex-1">
+                             <div class="flex items-center gap-2 mb-0.5">
+                                <span class="text-xs font-bold text-gray-400">{{ reply.nickname || reply.username }}</span>
+                                <span class="text-[10px] text-gray-500">{{ formatCommentTime(reply.createdAt) }}</span>
+                             </div>
+                             <p class="text-sm text-gray-300">{{ reply.content }}</p>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+              </div>
            </div>
         </div>
       </div>
@@ -245,7 +308,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { contentApi, interactionApi, videoApi, type ContentDetailVO, type VideoVO } from '@/api'
+import { contentApi, interactionApi, videoApi, commentApi, type ContentDetailVO, type VideoVO, type CommentVO } from '@/api'
 import { 
   Play as PlayIcon, 
   Pause as PauseIcon, 
@@ -284,12 +347,71 @@ const isDragging = ref(false)
 // Image Set State
 const imageSetIndex = ref(0)
 
+// Comments State
+const comments = ref<CommentVO[]>([])
+const loadingComments = ref(false)
+const submittingComment = ref(false)
+const commentInput = ref('')
+const totalComments = ref(0)
+
 const currentImageSetUrl = computed(() => {
   if (content.value?.contentType === 'IMAGE_SET' && content.value.mediaUrls) {
     return content.value.mediaUrls[imageSetIndex.value]
   }
   return ''
 })
+
+// === Fetch Comments ===
+const loadComments = async () => {
+  if (!props.video?.id) return
+  loadingComments.value = true
+  try {
+    const res = await commentApi.getComments(props.video.id)
+    comments.value = res || []
+    
+    // Calculate total
+    let count = comments.value.length
+    comments.value.forEach(c => {
+      if (c.replies) count += c.replies.length
+    })
+    totalComments.value = count
+  } catch (e) {
+    console.error('Failed to load comments', e)
+  } finally {
+    loadingComments.value = false
+  }
+}
+
+// === Submit Comment ===
+const submitComment = async () => {
+  if (!commentInput.value.trim() || submittingComment.value || !content.value?.id) return
+  
+  submittingComment.value = true
+  try {
+    await commentApi.addComment(content.value.id, commentInput.value)
+    commentInput.value = ''
+    await loadComments() // Reload comments
+  } catch (e) {
+    console.error('Failed to submit comment', e)
+  } finally {
+    submittingComment.value = false
+  }
+}
+
+// === Format Comment Time ===
+const formatCommentTime = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`
+  
+  return `${date.getMonth() + 1}-${date.getDate()}`
+}
 
 // === Fetch Data ===
 const loadContent = async () => {
@@ -334,8 +456,10 @@ const loadContent = async () => {
 watch(() => props.video, (newVal) => {
   if (newVal) {
     loadContent()
+    loadComments()
   } else {
     content.value = null
+    comments.value = []
   }
 }, { immediate: true })
 
