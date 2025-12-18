@@ -85,6 +85,25 @@ services:
       timeout: 10s
       retries: 3
 
+  # FFmpeg 视频处理服务
+  ffmpeg:
+    image: jrottenberg/ffmpeg:4.4-alpine
+    container_name: viewx-ffmpeg
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./uploads/videos:/workdir
+    networks:
+      - viewx-network
+    # 保持容器运行，等待处理任务
+    entrypoint: [ "/bin/sh", "-c", "while true; do sleep 3600; done" ]
+    healthcheck:
+      test: [ "CMD", "ffmpeg", "-version" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   postgres_data:
     driver: local
