@@ -220,7 +220,7 @@ export const authApi = {
         return request.post<string>('/auth/validate', { token })
     },
     me() {
-        return request.get<LoginVO['userInfo']>('/users/me')
+        return request.get<UserProfileVO>('/user/profile/me')
     },
     logout() {
         return request.post<void>('/auth/logout')
@@ -571,7 +571,7 @@ export const notificationApi = {
 // 会话 VO
 export interface ConversationVO {
     conversationId: number
-    otherUserId: number
+    otherUserId: number | string  // 支持大整数，使用 string 避免精度丢失
     otherUserUsername: string
     otherUserNickname: string
     otherUserAvatar: string
@@ -585,14 +585,16 @@ export interface ConversationVO {
 // 消息 VO
 export interface MessageVO {
     id: number
-    senderId: number
+    senderId: number | string  // 支持大整数
     senderUsername: string
     senderNickname: string
     senderAvatar: string
-    receiverId: number
+    receiverId: number | string  // 支持大整数
     content: string
     messageType: string
     isRead: boolean
+    isRecalled?: boolean  // 是否已撤回
+    recalledAt?: string   // 撤回时间
     createdAt: string
 }
 
@@ -604,19 +606,29 @@ export const chatApi = {
     },
 
     // 获取聊天历史
-    getChatHistory(otherUserId: number, page: number = 1, size: number = 50) {
+    getChatHistory(otherUserId: number | string, page: number = 1, size: number = 50) {
         return request.get<MessageVO[]>(`/messages/history/${otherUserId}`, {
             params: { page, size }
         })
     },
 
     // 标记消息为已读
-    markAsRead(otherUserId: number) {
+    markAsRead(otherUserId: number | string) {
         return request.put<void>(`/messages/read/${otherUserId}`)
     },
 
     // 获取未读消息总数
     getUnreadCount() {
         return request.get<number>('/messages/unread-count')
+    },
+
+    // 撤回消息
+    recallMessage(messageId: number | string) {
+        return request.put<void>(`/messages/${messageId}/recall`)
+    },
+
+    // 删除消息
+    deleteMessage(messageId: number | string) {
+        return request.delete<void>(`/messages/${messageId}`)
     }
 }

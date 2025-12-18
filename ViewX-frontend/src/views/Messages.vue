@@ -33,6 +33,7 @@
           :loading="chatStore.loading"
           @send="handleSendMessage"
           @typing="handleTyping"
+          @close="handleCloseConversation"
         />
         
         <div v-else class="empty-state">
@@ -78,6 +79,11 @@ function handleTyping() {
   }
 }
 
+// 关闭会话
+function handleCloseConversation() {
+  chatStore.clearCurrentConversation()
+}
+
 // 根据 userId 查询参数打开对话
 async function openConversationByUserId(userId: string | number) {
   if (!userId) return
@@ -102,7 +108,7 @@ async function openConversationByUserId(userId: string | number) {
       // 创建临时会话对象
       const tempConversation: ConversationVO = {
         conversationId: 0, // 临时ID，发送第一条消息时会创建真实会话
-        otherUserId: Number(userIdStr), // Use Number() to preserve precision
+        otherUserId: userIdStr, // ✅ 直接使用字符串，避免大整数精度丢失
         otherUserUsername: userProfile.username,
         otherUserNickname: userProfile.nickname,
         otherUserAvatar: userProfile.avatarUrl,
@@ -151,7 +157,7 @@ onUnmounted(() => {
 
 <style scoped>
 .messages-page {
-  height: 100vh;
+  height: 100%;
   background: #f5f5f5;
   overflow: hidden;
 }
@@ -246,6 +252,44 @@ onUnmounted(() => {
 
   .messages-container.has-conversation .chat-panel {
     display: flex;
+  }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .messages-page {
+    background: #121212; /* 极深背景 */
+  }
+
+  .messages-container {
+    background: #1a1a1a; /* 容器背景 */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .conversations-panel {
+    background: #1a1a1a;
+    border-right-color: #333;
+  }
+
+  .panel-header {
+    background: #1a1a1a;
+    border-bottom-color: #333;
+  }
+
+  .panel-header h2 {
+    color: #e5eaf3;
+  }
+
+  .chat-panel {
+    background: #121212;
+  }
+  
+  .empty-state {
+    color: #606266;
+  }
+  
+  .empty-state p {
+    color: #909399;
   }
 }
 </style>

@@ -1,19 +1,20 @@
 <template>
   <div class="message-input">
+    <!-- 输入框区域 -->
     <div class="input-area">
       <el-input
         v-model="inputText"
         type="textarea"
-        :rows="3"
+        :rows="5"
         :maxlength="maxLength"
-        show-word-limit
-        placeholder="输入消息... (Ctrl+Enter 发送)"
-        @keydown.ctrl.enter="handleSend"
+        placeholder="输入消息... (Enter 发送)"
+        @keydown.enter.exact.prevent="handleSend"
         @input="handleTyping"
       />
     </div>
 
-    <div class="input-actions">
+    <!-- 底部操作栏 -->
+    <div class="footer">
       <div class="tips">
         <el-icon><InfoFilled /></el-icon>
         <span v-if="!isMutualFollow" class="warning">
@@ -24,13 +25,18 @@
         </span>
       </div>
 
-      <el-button
-        type="primary"
-        :disabled="!canSend"
-        @click="handleSend"
-      >
-        发送
-      </el-button>
+      <div class="actions">
+        <!-- 字数统计 -->
+        <span class="word-count">{{ inputText.length }}/{{ maxLength }}</span>
+        
+        <el-button
+          type="primary"
+          :disabled="!canSend"
+          @click="handleSend"
+        >
+          发送
+        </el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -39,14 +45,12 @@
 import { ref, computed } from 'vue'
 import { InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { useChatStore } from '@/stores/chat'
 
 const emit = defineEmits<{
   send: [content: string]
   typing: []
 }>()
 
-const chatStore = useChatStore()
 const inputText = ref('')
 const typingTimeout = ref<number>()
 
@@ -103,19 +107,33 @@ function handleSend() {
 
 <style scoped>
 .message-input {
-  border-top: 1px solid #e4e7ed;
-  background: white;
-  padding: 16px 24px;
+  border-top: 1px solid var(--el-border-color-lighter, #e4e7ed);
+  background: var(--el-bg-color, white);
+  padding: 16px 24px 24px;
+  display: flex;
+  flex-direction: column;
 }
 
 .input-area {
+  flex: 1;
   margin-bottom: 12px;
 }
 
-.input-actions {
+.footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.word-count {
+  font-size: 12px;
+  color: #909399;
 }
 
 .tips {
@@ -126,20 +144,43 @@ function handleSend() {
   color: #909399;
 }
 
-.tips .warning {
-  color: #e6a23c;
-}
+.tips .warning { color: #e6a23c; }
+.tips .normal { color: #67c23a; }
 
-.tips .normal {
-  color: #67c23a;
-}
-
+/* 输入框样式覆盖 */
 :deep(.el-textarea__inner) {
   resize: none;
-  border-radius: 8px;
+  border: none; /* 无边框 */
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  font-size: 14px;
+  color: var(--el-text-color-primary, #303133);
 }
 
-:deep(.el-textarea .el-input__count) {
-  background: transparent;
+:deep(.el-textarea__inner:focus) {
+  box-shadow: none;
+}
+
+/* 隐藏 element-plus 自带的字数统计，因为我们自己实现了 */
+:deep(.el-input__count) {
+  display: none;
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .message-input {
+    background: #1a1a1a; /* 深色背景 */
+    border-top-color: #363637;
+  }
+  
+  :deep(.el-textarea__inner) {
+    color: #e5eaf3;
+  }
+  
+  .word-count {
+    color: #606266;
+  }
 }
 </style>

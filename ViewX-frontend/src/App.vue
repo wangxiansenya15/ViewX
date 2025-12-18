@@ -107,6 +107,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { type VideoVO } from '@/api'
 import { useWindowSize } from '@vueuse/core'
 import { getVersionChecker, destroyVersionChecker } from '@/utils/versionChecker'
+import { useUserStore } from '@/stores'
 
 // Components
 import NavBar from './components/NavBar.vue'
@@ -194,11 +195,41 @@ const triggerLoad = (cb?: () => void) => {
 
 const checkAuth = async () => {
   const token = localStorage.getItem('token')
-  if (token) isLoggedIn.value = true
+  if (token) {
+    // 如果有 token，尝试加载用户信息
+    const userStore = useUserStore()
+    
+    // 如果 userInfo 已经存在，直接标记为已登录
+    if (userStore.userInfo) {
+      isLoggedIn.value = true
+      return
+    }
+    
+    // 否则，从服务器获取用户信息
+    try {
+      const { authApi } = await import('@/api')
+      const userInfo = await authApi.me()
+      
+      // 保存用户信息（注意字段名映射：UserProfileVO -> UserInfo）
+      userStore.setUserInfo({
+        id: userInfo.userId,  // UserProfileVO 使用 userId
+        username: userInfo.username,
+        nickname: userInfo.nickname || userInfo.username,  // 优先使用 nickname
+        avatar: userInfo.avatarUrl || ''  // UserProfileVO 使用 avatarUrl
+      })
+      
+      isLoggedIn.value = true
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      // 如果获取失败，清除 token
+      handleLogout()
+    }
+  }
 }
 
 const handleLogout = async () => {
-  localStorage.removeItem('token')
+  const userStore = useUserStore()
+  userStore.logout()
   isLoggedIn.value = false
   router.push('/')
 }

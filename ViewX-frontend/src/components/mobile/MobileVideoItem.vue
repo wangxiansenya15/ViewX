@@ -55,8 +55,25 @@
       </div>
     </div>
 
+    <!-- Bottom Gradient Overlay -->
+    <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none z-20"></div>
+
+    <!-- Bottom Info (Title, Desc, User) -->
+    <div class="absolute bottom-4 left-4 right-[80px] z-30 flex flex-col items-start gap-3 pointer-events-none">
+       <!-- Author Name -->
+       <div class="pointer-events-auto cursor-pointer font-bold text-white text-2xl drop-shadow-md hover:underline transition-all" @click.stop="goToProfile">
+         @{{ video.uploaderNickname }}
+       </div>
+       
+       <!-- Title & Description -->
+       <div class="pointer-events-auto text-left space-y-2">
+          <div v-if="video.title" class="text-white text-lg font-medium leading-relaxed drop-shadow-md">{{ video.title }}</div>
+          <p v-if="video.description" class="text-white/95 text-base line-clamp-2 font-normal leading-snug drop-shadow-md">{{ video.description }}</p>
+       </div>
+    </div>
+
     <!-- Right Sidebar (Actions) -->
-    <div class="absolute bottom-[110px] right-2 flex flex-col items-center gap-5 pointer-events-auto pb-safe z-40">
+    <div class="absolute bottom-[80px] right-2 flex flex-col items-center gap-5 pointer-events-auto pb-safe z-40">
        <!-- Avatar -->
        <!-- Avatar -->
        <div class="relative mb-3 group active:scale-95 transition-transform" @click.stop="goToProfile">

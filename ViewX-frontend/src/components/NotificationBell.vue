@@ -20,7 +20,7 @@
     <transition name="dropdown">
       <div 
         v-if="showDropdown" 
-        class="absolute right-0 mt-2 w-80 max-h-96 bg-[var(--bg-glass)] backdrop-blur-xl border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden z-50"
+        class="absolute right-0 mt-2 w-80 max-h-96 bg-[#1a1d29] border border-[var(--border)] rounded-xl shadow-2xl overflow-hidden z-50"
         @click.stop
       >
         <!-- 头部 -->
@@ -50,8 +50,7 @@
             <div
               v-for="notification in notifications"
               :key="notification.id"
-              @click="handleNotificationClick(notification)"
-              class="px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-[var(--border)] last:border-b-0"
+              class="px-4 py-3 hover:bg-white/5 transition-colors border-b border-[var(--border)] last:border-b-0 group"
               :class="{ 'bg-indigo-500/5': !notification.isRead }"
             >
               <div class="flex gap-3">
@@ -72,7 +71,7 @@
                 </div>
 
                 <!-- 通知内容 -->
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0 cursor-pointer" @click="handleNotificationClick(notification)">
                   <p class="text-sm text-[var(--text)] mb-1">
                     <span 
                       v-if="notification.senderNickname" 
@@ -88,6 +87,15 @@
                   </p>
                   <p class="text-xs text-[var(--muted)] mt-1">{{ notification.timeDesc }}</p>
                 </div>
+
+                <!-- 删除按钮 -->
+                <button
+                  @click.stop="deleteNotification(notification.id)"
+                  class="opacity-0 group-hover:opacity-100 p-1 text-[var(--muted)] hover:text-red-500 transition-all flex-shrink-0"
+                  title="删除通知"
+                >
+                  <X class="w-4 h-4" />
+                </button>
 
                 <!-- 未读标记 -->
                 <div v-if="!notification.isRead" class="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-2"></div>
@@ -112,17 +120,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { Bell } from 'lucide-vue-next'
-import { notificationApi, type NotificationVO } from '@/api'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { Bell, X } from 'lucide-vue-next'
+import { type NotificationVO } from '@/api'
 import { useRouter } from 'vue-router'
+import { useNotificationStore } from '@/stores'
 
 const router = useRouter()
+const notificationStore = useNotificationStore()
 
 const showDropdown = ref(false)
-const loading = ref(false)
-const unreadCount = ref(0)
-const notifications = ref<NotificationVO[]>([])
+
+// 使用 store 中的状态
+const loading = computed(() => notificationStore.loading)
+const unreadCount = computed(() => notificationStore.unreadCount)
+const notifications = computed(() => notificationStore.notifications.slice(0, 10)) // 只显示前 10 条
 
 let refreshInterval: any = null
 
@@ -130,39 +142,19 @@ let refreshInterval: any = null
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
   if (showDropdown.value) {
-    fetchNotifications()
+    notificationStore.fetchNotifications({ page: 1, pageSize: 10 })
   }
 }
 
 // 获取未读数量
 const fetchUnreadCount = async () => {
-  try {
-    const count = await notificationApi.getUnreadCount()
-    unreadCount.value = count
-  } catch (e) {
-    console.error('Failed to fetch unread count', e)
-  }
-}
-
-// 获取通知列表
-const fetchNotifications = async () => {
-  loading.value = true
-  try {
-    const list = await notificationApi.getNotifications({ page: 1, pageSize: 10 })
-    notifications.value = list
-  } catch (e) {
-    console.error('Failed to fetch notifications', e)
-  } finally {
-    loading.value = false
-  }
+  await notificationStore.fetchUnreadCount()
 }
 
 // 标记所有为已读
 const markAllAsRead = async () => {
   try {
-    await notificationApi.markAllAsRead()
-    notifications.value.forEach(n => n.isRead = true)
-    unreadCount.value = 0
+    await notificationStore.markAllAsRead()
   } catch (e) {
     console.error('Failed to mark all as read', e)
   }
@@ -170,19 +162,18 @@ const markAllAsRead = async () => {
 
 // 处理通知点击
 const handleNotificationClick = async (notification: NotificationVO) => {
+  showDropdown.value = false
+  
   // 标记为已读
   if (!notification.isRead) {
     try {
-      await notificationApi.markAsRead(notification.id)
-      notification.isRead = true
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
+      await notificationStore.markAsRead(notification.id)
     } catch (e) {
       console.error('Failed to mark as read', e)
     }
   }
 
   // 跳转到相关页面
-  showDropdown.value = false
   if (notification.relatedVideoId) {
     router.push(`/video/${notification.relatedVideoId}`)
   } else if (notification.senderId) {
@@ -197,6 +188,14 @@ const goToUserProfile = (userId?: number) => {
   router.push(`/profile/${userId}`)
 }
 
+// 删除通知
+const deleteNotification = async (id: number) => {
+  try {
+    await notificationStore.deleteNotification(id)
+  } catch (e) {
+    console.error('Failed to delete notification', e)
+  }
+}
 
 // 点击外部关闭下拉框
 const handleClickOutside = (e: MouseEvent) => {
@@ -223,12 +222,7 @@ onUnmounted(() => {
 })
 </script>
 
-<script lang="ts">
-import { computed } from 'vue'
-export default {
-  name: 'NotificationBell'
-}
-</script>
+
 
 <style scoped>
 .dropdown-enter-active,

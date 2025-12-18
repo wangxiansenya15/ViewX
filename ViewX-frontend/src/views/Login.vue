@@ -157,6 +157,7 @@ import { Github, ArrowLeft } from 'lucide-vue-next'
 import { authApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
+import { useUserStore } from '@/stores'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -373,7 +374,20 @@ const handleLogin = async () => {
       password: loginForm.password
     })
     
-    localStorage.setItem('token', res.token)
+    // 保存用户信息到 store
+    const userStore = useUserStore()
+    userStore.setToken(res.token)
+    
+    // 从登录响应中提取用户信息并保存
+    if (res.userInfo) {
+      userStore.setUserInfo({
+        id: res.userInfo.id,
+        username: res.userInfo.username,
+        nickname: res.userInfo.username, // 使用 username 作为 nickname
+        avatar: res.userInfo.avatar || ''
+      })
+    }
+    
     ElMessage.success('登录成功')
     
     if (route.path === '/login') {

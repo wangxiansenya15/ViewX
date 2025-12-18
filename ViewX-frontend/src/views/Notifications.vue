@@ -148,8 +148,8 @@
           <div
             v-for="notification in notifications"
             :key="notification.id"
-            @click="handleNotificationClick(notification)"
-            class="px-6 py-4 hover:bg-white/5 cursor-pointer transition-colors border-b border-[var(--border)] last:border-b-0"
+            @contextmenu.prevent="showContextMenu($event, notification)"
+            class="px-6 py-4 hover:bg-white/5 transition-colors border-b border-[var(--border)] last:border-b-0 group"
             :class="{ 'bg-indigo-500/5': !notification.isRead }"
           >
             <div class="flex gap-4">
@@ -170,7 +170,7 @@
               </div>
 
               <!-- 内容 -->
-              <div class="flex-1 min-w-0">
+              <div class="flex-1 min-w-0 cursor-pointer" @click="handleNotificationClick(notification)">
                 <div class="flex items-start justify-between gap-4 mb-2">
                   <div>
                     <p class="text-base text-[var(--text)] font-medium mb-1">
@@ -209,6 +209,15 @@
                   </div>
                 </div>
               </div>
+
+              <!-- 删除按钮 -->
+              <button
+                @click.stop="deleteNotification(notification.id)"
+                class="opacity-0 group-hover:opacity-100 p-2 text-[var(--muted)] hover:text-red-500 transition-all flex-shrink-0 self-start"
+                title="删除通知"
+              >
+                <X class="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
@@ -224,22 +233,49 @@
         </div>
       </div>
     </div>
+
+    <!-- 右键菜单 -->
+    <teleport to="body">
+      <div
+        v-if="contextMenuVisible"
+        @click="hideContextMenu"
+        class="fixed inset-0 z-50"
+      >
+        <div
+          :style="{ left: contextMenuX + 'px', top: contextMenuY + 'px' }"
+          class="absolute bg-[var(--bg)] border border-[var(--border)] rounded-lg shadow-xl overflow-hidden min-w-[150px]"
+          @click.stop
+        >
+          <button
+            @click="handleContextMenuDelete"
+            class="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+          >
+            <X class="w-4 h-4" />
+            删除通知
+          </button>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, inject, type Ref } from 'vue'
+import { ref, onMounted, inject, type Ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Bell, ArrowLeft } from 'lucide-vue-next'
-import { notificationApi, type NotificationVO, type NotificationType } from '@/api'
+import { Bell, ArrowLeft, X } from 'lucide-vue-next'
+import { type NotificationVO, type NotificationType } from '@/api'
 import { ElMessage } from 'element-plus'
+import { useNotificationStore } from '@/stores'
 
 const router = useRouter()
 const isMobile = inject<Ref<boolean>>('isMobile', ref(false))
+const notificationStore = useNotificationStore()
 
-const loading = ref(false)
-const notifications = ref<NotificationVO[]>([])
-const unreadCount = ref(0)
+// 使用 store 中的状态
+const loading = computed(() => notificationStore.loading)
+const unreadCount = computed(() => notificationStore.unreadCount)
+const notifications = computed(() => notificationStore.notifications)
+
 const page = ref(1)
 const pageSize = 20
 const hasMore = ref(true)
@@ -249,40 +285,26 @@ const filterType = ref<NotificationType | ''>('')
 const fetchNotifications = async (reset = false) => {
   if (reset) {
     page.value = 1
-    notifications.value = []
     hasMore.value = true
   }
 
-  loading.value = true
   try {
-    const list = await notificationApi.getNotifications({
+    const list = await notificationStore.fetchNotifications({
       notificationType: filterType.value || undefined,
       page: page.value,
       pageSize
     })
     
-    if (reset) {
-      notifications.value = list
-    } else {
-      notifications.value.push(...list)
-    }
-    
     hasMore.value = list.length === pageSize
   } catch (e) {
     console.error('Failed to fetch notifications', e)
     ElMessage.error('获取通知失败')
-  } finally {
-    loading.value = false
   }
 }
 
 // 获取未读数量
 const fetchUnreadCount = async () => {
-  try {
-    unreadCount.value = await notificationApi.getUnreadCount()
-  } catch (e) {
-    console.error('Failed to fetch unread count', e)
-  }
+  await notificationStore.fetchUnreadCount()
 }
 
 // 加载更多
@@ -294,9 +316,7 @@ const loadMore = () => {
 // 标记所有为已读
 const markAllAsRead = async () => {
   try {
-    await notificationApi.markAllAsRead()
-    notifications.value.forEach(n => n.isRead = true)
-    unreadCount.value = 0
+    await notificationStore.markAllAsRead()
     ElMessage.success('已全部标记为已读')
   } catch (e) {
     console.error('Failed to mark all as read', e)
@@ -309,9 +329,7 @@ const handleNotificationClick = async (notification: NotificationVO) => {
   // 标记为已读
   if (!notification.isRead) {
     try {
-      await notificationApi.markAsRead(notification.id)
-      notification.isRead = true
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
+      await notificationStore.markAsRead(notification.id)
     } catch (e) {
       console.error('Failed to mark as read', e)
     }
@@ -331,8 +349,44 @@ const goToUserProfile = (userId?: number) => {
   router.push(`/profile/${userId}`)
 }
 
+// 删除通知
+const deleteNotification = async (id: number) => {
+  try {
+    await notificationStore.deleteNotification(id)
+    ElMessage.success('已删除通知')
+  } catch (e) {
+    console.error('Failed to delete notification', e)
+    ElMessage.error('删除失败')
+  }
+}
+
+// 右键菜单相关
+const contextMenuVisible = ref(false)
+const contextMenuX = ref(0)
+const contextMenuY = ref(0)
+const contextMenuNotification = ref<NotificationVO | null>(null)
+
+const showContextMenu = (event: MouseEvent, notification: NotificationVO) => {
+  contextMenuX.value = event.clientX
+  contextMenuY.value = event.clientY
+  contextMenuNotification.value = notification
+  contextMenuVisible.value = true
+}
+
+const hideContextMenu = () => {
+  contextMenuVisible.value = false
+  contextMenuNotification.value = null
+}
+
+const handleContextMenuDelete = () => {
+  if (contextMenuNotification.value) {
+    deleteNotification(contextMenuNotification.value.id)
+  }
+  hideContextMenu()
+}
+
 onMounted(() => {
-  fetchNotifications()
+  fetchNotifications(true)
   fetchUnreadCount()
 })
 </script>

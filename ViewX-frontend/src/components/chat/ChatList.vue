@@ -171,4 +171,40 @@ function formatTime(time: string) {
   margin: 0;
   font-size: 14px;
 }
+/* ... (existing styles) ... */
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .conversation-item {
+    border-bottom-color: #333;
+  }
+  
+  .conversation-item:hover {
+    background-color: #2c2c2c;
+  }
+  
+  .conversation-item.active {
+    background-color: #363637;
+  }
+  
+  .nickname {
+    color: #e5eaf3;
+  }
+  
+  .last-message {
+    color: #a3a6ad;
+  }
+  
+  .time {
+    color: #73767a;
+  }
+  
+  .online-dot {
+    border-color: #1a1a1a; /* 融入深色背景 */
+  }
+  
+  .empty {
+    color: #606266;
+  }
+}
 </style>
