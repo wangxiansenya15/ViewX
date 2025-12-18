@@ -10,6 +10,9 @@ CREATE TABLE vx_messages (
     content TEXT NOT NULL,
     message_type VARCHAR(20) DEFAULT 'TEXT' CHECK (message_type IN ('TEXT', 'IMAGE', 'VIDEO', 'EMOJI')),
     is_read BOOLEAN DEFAULT FALSE,
+    is_recalled BOOLEAN DEFAULT FALSE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    recalled_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     
@@ -22,6 +25,13 @@ CREATE INDEX idx_messages_sender ON vx_messages(sender_id, created_at DESC);
 CREATE INDEX idx_messages_receiver ON vx_messages(receiver_id, created_at DESC);
 CREATE INDEX idx_messages_conversation ON vx_messages(sender_id, receiver_id, created_at DESC);
 CREATE INDEX idx_messages_unread ON vx_messages(receiver_id, is_read) WHERE is_read = FALSE;
+CREATE INDEX idx_messages_is_deleted ON vx_messages(is_deleted);
+CREATE INDEX idx_messages_is_recalled ON vx_messages(is_recalled);
+
+-- 字段注释
+COMMENT ON COLUMN vx_messages.is_recalled IS '是否已撤回';
+COMMENT ON COLUMN vx_messages.is_deleted IS '是否已删除（软删除）';
+COMMENT ON COLUMN vx_messages.recalled_at IS '撤回时间';
 
 -- 会话表（用于快速查询会话列表）
 CREATE TABLE vx_conversations (

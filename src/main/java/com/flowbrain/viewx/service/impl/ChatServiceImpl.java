@@ -110,8 +110,8 @@ public class ChatServiceImpl implements ChatService {
             messageVO.setSenderNickname(sender.getNickname());
 
             // 处理头像 URL
-            if (sender.getDetails() != null && sender.getDetails().getAvatar() != null) {
-                String avatar = sender.getDetails().getAvatar();
+            if (sender.getDetails() != null && sender.getDetails().getAvatarUrl() != null) {
+                String avatar = sender.getDetails().getAvatarUrl();
                 if (!avatar.startsWith("http")) {
                     avatar = storageStrategy.getFileUrl(avatar);
                 }
@@ -167,16 +167,17 @@ public class ChatServiceImpl implements ChatService {
                         ? conversation.getUser2Id()
                         : conversation.getUser1Id();
 
-                // 获取对方用户信息
-                User otherUser = userMapper.selectById(otherUserId);
+                // 获取对方用户信息（包括详情）
+                User otherUser = userMapper.selectUserWithDetailsById(otherUserId);
                 if (otherUser != null) {
                     vo.setOtherUserId(otherUserId);
                     vo.setOtherUserUsername(otherUser.getUsername());
                     vo.setOtherUserNickname(otherUser.getNickname());
+                    vo.setOtherUserAvatar(otherUser.getDetails().getAvatarUrl());
 
                     // 处理头像
-                    if (otherUser.getDetails() != null && otherUser.getDetails().getAvatar() != null) {
-                        String avatar = otherUser.getDetails().getAvatar();
+                    if (otherUser.getDetails() != null && otherUser.getDetails().getAvatarUrl() != null) {
+                        String avatar = otherUser.getDetails().getAvatarUrl();
                         if (!avatar.startsWith("http")) {
                             avatar = storageStrategy.getFileUrl(avatar);
                         }
@@ -236,6 +237,58 @@ public class ChatServiceImpl implements ChatService {
         } catch (Exception e) {
             log.error("获取未读消息数失败", e);
             return Result.serverError("获取未读消息数失败");
+        }
+    }
+
+    @Override
+    @Transactional
+    public Result<Void> recallMessage(Long userId, Long messageId) {
+        try {
+            // 检查消息是否可以撤回
+            boolean canRecall = messageMapper.canRecallMessage(messageId, userId);
+
+            if (!canRecall) {
+                return Result.badRequest("无法撤回该消息（只能撤回自己发送的消息，且在2分钟内）");
+            }
+
+            // 执行撤回
+            int rows = messageMapper.recallMessage(messageId, userId);
+
+            if (rows > 0) {
+                log.info("消息撤回成功: messageId={}, userId={}", messageId, userId);
+                return Result.success("消息撤回成功");
+            } else {
+                return Result.badRequest("消息撤回失败");
+            }
+        } catch (Exception e) {
+            log.error("撤回消息失败", e);
+            return Result.serverError("撤回消息失败");
+        }
+    }
+
+    @Override
+    @Transactional
+    public Result<Void> deleteMessage(Long userId, Long messageId) {
+        try {
+            // 检查消息是否属于该用户
+            boolean belongs = messageMapper.isMessageBelongsToUser(messageId, userId);
+
+            if (!belongs) {
+                return Result.forbidden("无权删除该消息");
+            }
+
+            // 执行删除（软删除）
+            int rows = messageMapper.deleteMessage(messageId, userId);
+
+            if (rows > 0) {
+                log.info("消息删除成功: messageId={}, userId={}", messageId, userId);
+                return Result.success("消息删除成功");
+            } else {
+                return Result.badRequest("消息删除失败");
+            }
+        } catch (Exception e) {
+            log.error("删除消息失败", e);
+            return Result.serverError("删除消息失败");
         }
     }
 

@@ -329,11 +329,11 @@ public class InteractionServiceImpl implements InteractionService {
             QueryWrapper<UserDetail> detailQuery = new QueryWrapper<>();
             detailQuery.eq("user_id", comment.getUserId());
             UserDetail detail = userDetailMapper.selectOne(detailQuery);
-            if (detail != null && detail.getAvatar() != null) {
-                if (!detail.getAvatar().startsWith("http")) {
-                    vo.setUserAvatar(storageStrategy.getFileUrl(detail.getAvatar()));
+            if (detail != null && detail.getAvatarUrl() != null) {
+                if (!detail.getAvatarUrl().startsWith("http")) {
+                    vo.setUserAvatar(storageStrategy.getFileUrl(detail.getAvatarUrl()));
                 } else {
-                    vo.setUserAvatar(detail.getAvatar());
+                    vo.setUserAvatar(detail.getAvatarUrl());
                 }
             }
         }

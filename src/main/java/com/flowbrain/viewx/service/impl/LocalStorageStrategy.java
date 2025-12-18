@@ -140,6 +140,15 @@ public class LocalStorageStrategy implements StorageStrategy {
     }
 
     /**
+     * 获取存储根目录的绝对路径
+     * 
+     * @return 存储根目录的绝对路径字符串
+     */
+    public String getStorageRoot() {
+        return storageLocation.toString();
+    }
+
+    /**
      * 从文件URL中提取相对路径
      * 
      * 该方法处理多种URL格式：

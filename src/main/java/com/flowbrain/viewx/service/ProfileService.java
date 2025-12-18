@@ -163,7 +163,7 @@ public class ProfileService {
         // UserDetail 字段
         if (user.getDetails() != null) {
             UserDetail detail = user.getDetails();
-            vo.setAvatarUrl(detail.getAvatar());
+            vo.setAvatarUrl(detail.getAvatarUrl());
             vo.setDescription(detail.getDescription());
             vo.setAge(detail.getAge());
             vo.setGender(detail.getGender());
@@ -206,7 +206,7 @@ public class ProfileService {
         if (dto.getAddress() != null)
             detail.setAddress(dto.getAddress());
         if (dto.getAvatarUrl() != null)
-            detail.setAvatar(dto.getAvatarUrl());
+            detail.setAvatarUrl(dto.getAvatarUrl());
 
         if (detail.getId() == null) {
             userDetailMapper.insert(detail);
@@ -236,8 +236,8 @@ public class ProfileService {
                             .eq("user_id", userId));
 
             String oldAvatarUrl = null;
-            if (userDetail != null && userDetail.getAvatar() != null) {
-                oldAvatarUrl = userDetail.getAvatar();
+            if (userDetail != null && userDetail.getAvatarUrl() != null) {
+                oldAvatarUrl = userDetail.getAvatarUrl();
             }
 
             // 2. 存储新头像
@@ -249,10 +249,10 @@ public class ProfileService {
             if (userDetail == null) {
                 userDetail = new UserDetail();
                 userDetail.setUserId(userId);
-                userDetail.setAvatar(newAvatarUrl);
+                userDetail.setAvatarUrl(newAvatarUrl);
                 userDetailMapper.insert(userDetail);
             } else {
-                userDetail.setAvatar(newAvatarUrl);
+                userDetail.setAvatarUrl(newAvatarUrl);
                 userDetailMapper.updateById(userDetail);
             }
 

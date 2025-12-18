@@ -87,12 +87,12 @@ public class VideoServiceImpl implements VideoService {
             query.eq("user_id", video.getUploaderId());
             com.flowbrain.viewx.pojo.entity.UserDetail detail = userDetailMapper.selectOne(query);
 
-            if (detail != null && detail.getAvatar() != null) {
+            if (detail != null && detail.getAvatarUrl() != null) {
                 // 处理头像URL
-                if (!detail.getAvatar().startsWith("http")) {
-                    vo.setUploaderAvatar(storageStrategy.getFileUrl(detail.getAvatar()));
+                if (!detail.getAvatarUrl().startsWith("http")) {
+                    vo.setUploaderAvatar(storageStrategy.getFileUrl(detail.getAvatarUrl()));
                 } else {
-                    vo.setUploaderAvatar(detail.getAvatar());
+                    vo.setUploaderAvatar(detail.getAvatarUrl());
                 }
             }
         }
@@ -131,6 +131,7 @@ public class VideoServiceImpl implements VideoService {
             String thumbnailUrl = null;
 
             if (coverFile != null && !coverFile.isEmpty()) {
+                // 用户上传了封面图
                 try {
                     // 上传封面图片
                     String coverOriginalFilename = coverFile.getOriginalFilename();
@@ -171,6 +172,103 @@ public class VideoServiceImpl implements VideoService {
                     coverUrl = dto.getCoverUrl();
                 }
                 thumbnailUrl = dto.getThumbnailUrl();
+            } else {
+                // 用户既没有上传封面，也没有提供coverUrl，自动从视频提取关键帧
+                log.info("用户未上传封面图，尝试从视频中提取关键帧作为封面");
+                try {
+                    // 获取已上传的视频文件
+                    java.io.File uploadedVideoFile = new java.io.File(
+                            storageStrategy.getStorageRoot() + "/" + storedFilename);
+
+                    if (uploadedVideoFile.exists()) {
+                        // 从视频第1秒提取关键帧作为封面
+                        String generatedCoverFilename = videoProcessingService.generateThumbnail(uploadedVideoFile, 1);
+
+                        // 生成的文件在 uploads/videos 目录下，需要移动到 covers 目录
+                        java.io.File generatedFile = new java.io.File(
+                                storageStrategy.getStorageRoot() + "/videos/" + generatedCoverFilename);
+
+                        if (generatedFile.exists()) {
+                            // 构建封面URL
+                            coverUrl = storageStrategy.getFileUrl("videos/" + generatedCoverFilename);
+
+                            // 从生成的封面创建缩略图
+                            try {
+                                // 直接读取生成的封面文件
+                                java.io.FileInputStream fis = new java.io.FileInputStream(generatedFile);
+                                byte[] coverBytes = fis.readAllBytes();
+                                fis.close();
+
+                                // 创建临时的 MultipartFile 实现
+                                final String finalCoverFilename = generatedCoverFilename;
+                                MultipartFile tempCoverFile = new MultipartFile() {
+                                    @Override
+                                    public String getName() {
+                                        return "cover";
+                                    }
+
+                                    @Override
+                                    public String getOriginalFilename() {
+                                        return finalCoverFilename;
+                                    }
+
+                                    @Override
+                                    public String getContentType() {
+                                        return "image/jpeg";
+                                    }
+
+                                    @Override
+                                    public boolean isEmpty() {
+                                        return coverBytes.length == 0;
+                                    }
+
+                                    @Override
+                                    public long getSize() {
+                                        return coverBytes.length;
+                                    }
+
+                                    @Override
+                                    public byte[] getBytes() {
+                                        return coverBytes;
+                                    }
+
+                                    @Override
+                                    public java.io.InputStream getInputStream() {
+                                        return new java.io.ByteArrayInputStream(coverBytes);
+                                    }
+
+                                    @Override
+                                    public void transferTo(java.io.File dest) throws java.io.IOException {
+                                        java.nio.file.Files.write(dest.toPath(), coverBytes);
+                                    }
+                                };
+
+                                byte[] thumbnailBytes = videoProcessingService
+                                        .generateThumbnailFromCover(tempCoverFile);
+                                String thumbnailFilename = "videos/thumbnails/thumb_" + userId + "_"
+                                        + System.currentTimeMillis() + ".jpg";
+                                String storedThumbnailFilename = storageStrategy.storeFile(
+                                        new java.io.ByteArrayInputStream(thumbnailBytes),
+                                        thumbnailFilename);
+                                thumbnailUrl = storageStrategy.getFileUrl(storedThumbnailFilename);
+
+                                log.info("从视频提取的封面成功生成缩略图: {}", thumbnailUrl);
+                            } catch (Exception e) {
+                                log.warn("从提取的封面生成缩略图失败，使用封面作为缩略图: {}", e.getMessage());
+                                thumbnailUrl = coverUrl;
+                            }
+
+                            log.info("成功从视频提取封面: coverUrl={}, thumbnailUrl={}", coverUrl, thumbnailUrl);
+                        } else {
+                            log.warn("FFmpeg 生成的封面文件不存在: {}", generatedFile.getAbsolutePath());
+                        }
+                    } else {
+                        log.warn("上传的视频文件不存在，无法提取封面: {}", uploadedVideoFile.getAbsolutePath());
+                    }
+                } catch (Exception e) {
+                    log.error("从视频提取封面失败，视频将没有封面图", e);
+                    // 提取失败不影响视频上传，只是没有封面而已
+                }
             }
 
             // 3. 创建视频记录

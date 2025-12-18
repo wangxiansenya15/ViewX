@@ -130,10 +130,16 @@ public class SecurityConfig {
                 throw new BadCredentialsException("用户详细信息不存在");
             }
 
+            // 构建UserDetails，包含账户状态信息
             return org.springframework.security.core.userdetails.User
                     .withUsername(user.getUsername())
                     .password(user.getPassword())
                     .roles(new String[] { (user.getRole().name()) })
+                    // 设置账户状态字段，这些字段控制用户是否能够登录
+                    .disabled(!user.isEnabled()) // 账户是否被禁用
+                    .accountExpired(!user.isAccountNonExpired()) // 账户是否过期
+                    .accountLocked(!user.isAccountNonLocked()) // 账户是否被锁定
+                    .credentialsExpired(!user.isCredentialsNonExpired()) // 凭证是否过期
                     .build();
         };
     }

@@ -105,13 +105,13 @@ public class RecommendServiceImpl implements RecommendService {
             UserDetail detail = userDetailMapper.selectOne(query);
 
             if (detail != null) {
-                if (detail.getAvatar() != null) {
+                if (detail.getAvatarUrl() != null) {
                     // 处理头像URL
-                    if (!detail.getAvatar().startsWith("http")) {
-                        String fullUrl = storageStrategy.getFileUrl(detail.getAvatar());
+                    if (!detail.getAvatarUrl().startsWith("http")) {
+                        String fullUrl = storageStrategy.getFileUrl(detail.getAvatarUrl());
                         vo.setUploaderAvatar(fullUrl);
                     } else {
-                        vo.setUploaderAvatar(detail.getAvatar());
+                        vo.setUploaderAvatar(detail.getAvatarUrl());
                     }
                 }
             }

@@ -36,4 +36,14 @@ public interface ChatService {
      * 获取未读消息总数
      */
     Result<Integer> getTotalUnreadCount(Long userId);
+
+    /**
+     * 撤回消息（只能撤回自己发送的消息，且在2分钟内）
+     */
+    Result<Void> recallMessage(Long userId, Long messageId);
+
+    /**
+     * 删除消息（软删除）
+     */
+    Result<Void> deleteMessage(Long userId, Long messageId);
 }

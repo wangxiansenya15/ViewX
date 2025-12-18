@@ -17,6 +17,9 @@ public class Message {
     private String content;
     private String messageType; // TEXT, IMAGE, VIDEO, EMOJI
     private Boolean isRead;
+    private Boolean isRecalled; // 是否已撤回
+    private Boolean isDeleted; // 是否已删除
+    private LocalDateTime recalledAt; // 撤回时间
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

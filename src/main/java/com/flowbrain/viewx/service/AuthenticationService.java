@@ -76,7 +76,20 @@ public class AuthenticationService {
             log.info("登录成功，返回200 OK响应");
             return Result.success("登录成功", responseUserDTO);
 
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            log.warn("登录失败: 账户已被禁用，用户名: {}", userDTO.getUsername());
+            return Result.forbidden("账户已被禁用，请联系管理员");
+        } catch (org.springframework.security.authentication.LockedException e) {
+            log.warn("登录失败: 账户已被锁定，用户名: {}", userDTO.getUsername());
+            return Result.forbidden("账户已被锁定，请联系管理员");
+        } catch (org.springframework.security.authentication.AccountExpiredException e) {
+            log.warn("登录失败: 账户已过期，用户名: {}", userDTO.getUsername());
+            return Result.forbidden("账户已过期，请联系管理员");
+        } catch (org.springframework.security.authentication.CredentialsExpiredException e) {
+            log.warn("登录失败: 凭证已过期，用户名: {}", userDTO.getUsername());
+            return Result.forbidden("凭证已过期，请重置密码");
         } catch (BadCredentialsException e) {
+            log.warn("登录失败: 用户名或密码错误，用户名: {}", userDTO.getUsername());
             return Result.badRequest("凭证无效,用户名或密码错误");
         } catch (Exception e) {
             log.error("登录失败", e);

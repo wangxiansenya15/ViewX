@@ -138,21 +138,30 @@ public class NotificationService {
     @Transactional
     public Result<String> deleteNotification(Long userId, Long notificationId) {
         try {
+            // 先查询通知是否存在且属于该用户
             LambdaQueryWrapper<Notification> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(Notification::getId, notificationId)
-                    .eq(Notification::getRecipientId, userId);
+                    .eq(Notification::getRecipientId, userId)
+                    .eq(Notification::getIsDeleted, false);
 
             Notification notification = notificationMapper.selectOne(queryWrapper);
             if (notification == null) {
                 return Result.notFound("通知不存在");
             }
 
-            // 软删除
-            notification.setIsDeleted(true);
-            notification.setDeletedAt(LocalDateTime.now());
-            notificationMapper.updateById(notification);
+            // 使用 UpdateWrapper 进行软删除
+            LambdaUpdateWrapper<Notification> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(Notification::getId, notificationId)
+                    .eq(Notification::getRecipientId, userId)
+                    .set(Notification::getIsDeleted, true)
+                    .set(Notification::getDeletedAt, LocalDateTime.now());
 
-            return Result.success("删除成功");
+            int updated = notificationMapper.update(null, updateWrapper);
+            if (updated > 0) {
+                return Result.success("删除成功");
+            } else {
+                return Result.serverError("删除失败");
+            }
         } catch (Exception e) {
             log.error("删除失败", e);
             return Result.serverError("删除失败");

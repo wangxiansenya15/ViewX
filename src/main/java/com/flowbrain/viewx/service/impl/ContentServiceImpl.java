@@ -244,11 +244,11 @@ public class ContentServiceImpl implements ContentService {
             query.eq("user_id", content.getUploaderId());
             com.flowbrain.viewx.pojo.entity.UserDetail detail = userDetailMapper.selectOne(query);
 
-            if (detail != null && detail.getAvatar() != null) {
-                if (!detail.getAvatar().startsWith("http")) {
-                    vo.setUploaderAvatar(storageStrategy.getFileUrl(detail.getAvatar()));
+            if (detail != null && detail.getAvatarUrl() != null) {
+                if (!detail.getAvatarUrl().startsWith("http")) {
+                    vo.setUploaderAvatar(storageStrategy.getFileUrl(detail.getAvatarUrl()));
                 } else {
-                    vo.setUploaderAvatar(detail.getAvatar());
+                    vo.setUploaderAvatar(detail.getAvatarUrl());
                 }
             }
         }

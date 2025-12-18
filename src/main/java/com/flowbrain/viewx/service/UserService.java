@@ -128,6 +128,19 @@ public class UserService {
     }
 
     /**
+     * 根据ID获取用户名
+     *
+     * @param id 用户ID
+     * @return 用户名，如果不存在返回 null
+     */
+    public String getUsernameById(Long id) {
+        if (id == null)
+            return null;
+        User user = userMapper.selectById(id);
+        return user != null ? user.getUsername() : null;
+    }
+
+    /**
      * 根据ID获取用户
      *
      * @param id 用户ID

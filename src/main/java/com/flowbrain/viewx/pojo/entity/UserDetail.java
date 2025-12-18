@@ -17,7 +17,7 @@ public class UserDetail {
     private String description;
 
     @TableField(value = "avatar_url")
-    private String avatar;
+    private String avatarUrl;
 
     @TableField(value = "age")
     private Integer age;

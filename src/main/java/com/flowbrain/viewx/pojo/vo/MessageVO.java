@@ -1,5 +1,6 @@
 package com.flowbrain.viewx.pojo.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -17,5 +18,11 @@ public class MessageVO {
     private String content;
     private String messageType;
     private Boolean isRead;
+    private Boolean isRecalled; // 是否已撤回
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS")
     private LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS")
+    private LocalDateTime recalledAt; // 撤回时间
 }
