@@ -49,3 +49,6 @@ uploads
 Thumbs.db
 .env
 .agent
+
+### personal config ###
+.cursorrules

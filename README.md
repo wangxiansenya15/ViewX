@@ -203,9 +203,9 @@ http://localhost:8080/swagger-ui/index.html
 | 阶段           | 状态 | 主要内容 |
 |--------------|------|----------|
 | **v0.0.1**   | ✅ 已完成 | 用户系统、基础架构、AI 接入、Redis/MQ |
-| **v0.12.2**  | 🚧 进行中 | 视频上传、转码、HLS 播放 |
-| **v0.12.31** | 📅 计划中 | 评论业务逻辑、通知系统完善 |
-| **v1.0.0**   | 📅 计划中 | 推荐系统（协同过滤 + 内容推荐） |
+| **v0.12.2**  | ✅ 已完成 | 视频上传、转码、HLS 播放 |
+| **v0.12.20-dev** | ✅ 已完成 | 基础功能完整闭环（聊天、通知、安全修复、人机验证） |
+| **v1.0.0**   | 📅 计划中 | 推荐系统（协同过滤 + 内容推荐）、性能优化 |
 | **v1.0.1**   | 📅 计划中 | 前后端联调、部署上线 |
 
 详细路线图请查看 [Project_Roadmap.md](docs/Project_Roadmap.md)
@@ -219,6 +219,9 @@ http://localhost:8080/swagger-ui/index.html
 - [数据层架构](docs/Data_Layer_Architecture.md)
 - [开发踩坑记录](docs/Development_Pitfalls.md)
 - [AI 集成指南](docs/AI_Integration_Guide.md)
+- [Cursor Rules 配置说明](docs/Cursor-Rules-配置说明.md) - **使用 Cursor Antigravity等AI IDE必读**
+- [人机验证实现总结](docs/人机验证实现总结.md)
+- [人机验证快速参考](docs/人机验证-快速参考.md)
 
 ---
 
