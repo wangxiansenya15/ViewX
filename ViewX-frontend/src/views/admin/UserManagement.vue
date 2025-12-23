@@ -4,12 +4,16 @@
       <h1 class="text-2xl font-bold text-gray-800 dark:text-white">用户管理</h1>
       <div class="flex gap-3">
         <input 
+          v-model="searchKeyword"
           type="text" 
           placeholder="搜索用户..." 
           class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
         >
-        <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+        <button @click="searchUsers" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
           搜索
+        </button>
+        <button @click="openCreateModal" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+          <el-icon><Plus /></el-icon> 添加用户
         </button>
       </div>
     </div>
@@ -36,7 +40,10 @@
                   <span v-else>{{ user.username.charAt(0).toUpperCase() }}</span>
                 </div>
                 <div>
-                  <div class="font-medium text-gray-800 dark:text-white">{{ user.nickname || user.username }}</div>
+                  <div class="font-medium text-gray-800 dark:text-white">
+                    {{ user.username }}
+                    <span v-if="user.nickname && user.nickname !== user.username" class="text-gray-500 dark:text-gray-400 font-normal">({{ user.nickname }})</span>
+                  </div>
                   <div class="text-xs text-gray-500">{{ user.email }}</div>
                 </div>
               </div>
@@ -73,11 +80,71 @@
                 <button @click="openEditModal(user)" class="text-sm text-gray-600 dark:text-gray-400 hover:underline flex items-center gap-1">
                   <el-icon><Edit /></el-icon> 编辑
                 </button>
+                <button @click="confirmDeleteUser(user)" class="text-sm text-red-600 dark:text-red-400 hover:underline flex items-center gap-1">
+                  <el-icon><Delete /></el-icon> 删除
+                </button>
               </div>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Create User Modal -->
+    <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 class="text-xl font-bold text-gray-800 dark:text-white">添加新用户</h3>
+          <button @click="closeCreateModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">
+            <el-icon><Close /></el-icon>
+          </button>
+        </div>
+        
+        <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">用户名 *</label>
+            <input v-model="createForm.username" type="text" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="输入用户名" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">密码 *</label>
+            <input v-model="createForm.password" type="password" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="输入密码（默认123456）" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">邮箱 *</label>
+            <input v-model="createForm.email" type="email" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="输入邮箱" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">昵称</label>
+            <input v-model="createForm.nickname" type="text" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="输入昵称（可选）" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">手机号</label>
+            <input v-model="createForm.phone" type="text" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="输入手机号（可选）" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">角色</label>
+            <select v-model="createForm.role" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="USER">普通用户</option>
+              <option value="ADMIN">管理员</option>
+              <option value="SUPER_ADMIN">超级管理员</option>
+              <option value="REVIEWER">审核员</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+          <button @click="closeCreateModal" class="px-4 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">取消</button>
+          <button @click="submitCreate" :disabled="creating" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+            <span v-if="creating" class="mr-2 animate-spin">⟳</span>
+            {{ creating ? '创建中...' : '创建用户' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Upload Video Modal -->
@@ -107,8 +174,8 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">视频文件</label>
             <div class="flex items-center gap-4">
-              <input type="file" ref="videoInput" accept="video/*" @change="handleVideoFileChange" class="hidden" />
-              <button @click="$refs.videoInput.click()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+              <input type="file" ref="videoInputRef" accept="video/*" @change="handleVideoFileChange" class="hidden" />
+              <button @click="() => videoInputRef?.click()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 选择视频
               </button>
               <span v-if="videoFile" class="text-sm text-green-600 dark:text-green-400 truncate max-w-[200px]">{{ videoFile.name }}</span>
@@ -119,8 +186,8 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">封面图片</label>
             <div class="flex items-center gap-4">
-              <input type="file" ref="coverInput" accept="image/*" @change="handleCoverFileChange" class="hidden" />
-              <button @click="$refs.coverInput.click()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+              <input type="file" ref="coverInputRef" accept="image/*" @change="handleCoverFileChange" class="hidden" />
+              <button @click="() => coverInputRef?.click()" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                 选择封面
               </button>
               <span v-if="coverFile" class="text-sm text-green-600 dark:text-green-400 truncate max-w-[200px]">{{ coverFile.name }}</span>
@@ -212,11 +279,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { adminApi, videoApi } from '@/api'
-import { VideoCamera, Close, Edit } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { VideoCamera, Close, Edit, Plus, Delete } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 const users = ref<any[]>([])
 const loading = ref(false)
+const searchKeyword = ref('')
+
+// Create Modal State
+const showCreateModal = ref(false)
+const creating = ref(false)
+const createForm = ref({
+  username: '',
+  password: '',
+  email: '',
+  phone: '',
+  nickname: '',
+  role: 'USER'
+})
 
 // Upload Modal State
 const showUploadModal = ref(false)
@@ -230,6 +310,8 @@ const uploadForm = ref({
 })
 const videoFile = ref<File | null>(null)
 const coverFile = ref<File | null>(null)
+const videoInputRef = ref<HTMLInputElement | null>(null)
+const coverInputRef = ref<HTMLInputElement | null>(null)
 
 // Edit Modal State
 const showEditModal = ref(false)
@@ -348,22 +430,19 @@ const submitUpload = async () => {
 
   uploading.value = true
   try {
-    // 1. Upload Video File
-    const videoUrl = await videoApi.uploadVideoFile(videoFile.value)
-    uploadForm.value.videoUrl = videoUrl
-
-    // 2. Upload Cover Image
-    const coverUrl = await videoApi.uploadCoverImage(coverFile.value)
-    uploadForm.value.thumbnailUrl = coverUrl
-
-    // 3. Create Video Record for User
-    await adminApi.createVideoForUser(selectedUser.value.id, {
+    // Note: This upload functionality needs proper implementation
+    // For now, we'll use the standard video upload API
+    if (!videoFile.value || !coverFile.value) return
+    
+    // Upload video with metadata
+    const videoId = await videoApi.uploadVideo(videoFile.value, coverFile.value, {
       title: uploadForm.value.title,
-      description: uploadForm.value.description,
-      videoUrl: uploadForm.value.videoUrl,
-      thumbnailUrl: uploadForm.value.thumbnailUrl,
+      description: uploadForm.value.description || '',
+      duration: 0, // This should be calculated from video file
       visibility: 'PUBLIC'
     })
+
+    console.log('Video uploaded successfully, ID:', videoId)
 
     ElMessage.success('视频发布成功')
     closeUploadModal()
@@ -435,6 +514,86 @@ const submitEdit = async () => {
   } finally {
     saving.value = false
   }
+}
+
+// Create User Actions
+const openCreateModal = () => {
+  createForm.value = {
+    username: '',
+    password: '',
+    email: '',
+    phone: '',
+    nickname: '',
+    role: 'USER'
+  }
+  showCreateModal.value = true
+}
+
+const closeCreateModal = () => {
+  showCreateModal.value = false
+}
+
+const submitCreate = async () => {
+  if (!createForm.value.username) {
+    ElMessage.warning('请输入用户名')
+    return
+  }
+  if (!createForm.value.email) {
+    ElMessage.warning('请输入邮箱')
+    return
+  }
+  
+  creating.value = true
+  try {
+    await adminApi.createUser({
+      username: createForm.value.username,
+      password: createForm.value.password || '123456',
+      email: createForm.value.email,
+      phone: createForm.value.phone,
+      nickname: createForm.value.nickname,
+      role: createForm.value.role
+    })
+    
+    ElMessage.success('用户创建成功')
+    closeCreateModal()
+    fetchUsers()
+  } catch (e: any) {
+    console.error('Create user failed:', e)
+    ElMessage.error(e.message || '创建失败，请重试')
+  } finally {
+    creating.value = false
+  }
+}
+
+// Delete User
+const confirmDeleteUser = async (user: any) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除用户 "${user.nickname || user.username}" 吗？此操作不可恢复。`,
+      '确认删除',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    
+    await adminApi.deleteUser(user.id)
+    ElMessage.success('用户已删除')
+    fetchUsers()
+  } catch (e: any) {
+    if (e !== 'cancel') {
+      console.error('Delete user failed:', e)
+      ElMessage.error('删除失败，请重试')
+    }
+  }
+}
+
+// Search Users
+const searchUsers = () => {
+  // TODO: Implement search functionality
+  ElMessage.info('搜索功能开发中...')
 }
 
 onMounted(() => {

@@ -7,9 +7,9 @@
 
     <!-- === MOBILE LAYOUT === -->
     <div v-if="isMobile" class="h-full w-full relative z-0">
-       <!-- Header (Conditional) -->
+       <!-- Header (Conditional) - Only show on Home -->
        <MobileHeader 
-         v-if="!route.meta.hideHeader" 
+         v-if="route.path === '/'" 
          :active-tab="mobileTab"
          @toggle-sidebar="mobileSidebarOpen = true"
          @change-tab="(t: string) => mobileTab = t"

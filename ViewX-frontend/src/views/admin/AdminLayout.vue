@@ -85,7 +85,8 @@ import {
   Video, 
   Home as HomeIcon,
   Menu,
-  X
+  X,
+  Activity
 } from 'lucide-vue-next'
 import { Management } from '@element-plus/icons-vue'
 
@@ -93,6 +94,7 @@ import { Management } from '@element-plus/icons-vue'
 import Dashboard from './Dashboard.vue'
 import UserManagement from './UserManagement.vue'
 import VideoReview from './VideoReview.vue'
+import RabbitMQManagement from './RabbitMQManagement.vue'
 
 const router = useRouter()
 const emit = defineEmits(['back-to-home'])
@@ -104,6 +106,7 @@ const menuItems = [
   { id: 'dashboard', label: '仪表盘', icon: LayoutDashboard },
   { id: 'users', label: '用户管理', icon: Users },
   { id: 'videos', label: '视频审核', icon: Video },
+  { id: 'rabbitmq', label: 'RabbitMQ 管理', icon: Activity },
 ]
 
 const currentViewComponent = computed(() => {
@@ -111,6 +114,7 @@ const currentViewComponent = computed(() => {
     case 'dashboard': return Dashboard
     case 'users': return UserManagement
     case 'videos': return VideoReview
+    case 'rabbitmq': return RabbitMQManagement
     default: return Dashboard
   }
 })

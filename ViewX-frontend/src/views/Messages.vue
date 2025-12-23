@@ -46,8 +46,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, onUnmounted, watch, inject, type Ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useChatStore, useUserStore } from '@/stores'
 import ChatList from '@/components/chat/ChatList.vue'
 import ChatWindow from '@/components/chat/ChatWindow.vue'
@@ -57,12 +57,18 @@ import { userApi, type ConversationVO } from '@/api'
 
 
 const route = useRoute()
+const router = useRouter()
 const chatStore = useChatStore()
 const userStore = useUserStore()
+const isMobile = inject<Ref<boolean>>('isMobile')!
 
 // 选择会话
 function handleSelectConversation(conversation: ConversationVO) {
-  chatStore.selectConversation(conversation)
+  if (isMobile.value) {
+      router.push(`/chat/${conversation.otherUserId}`)
+  } else {
+      chatStore.selectConversation(conversation)
+  }
 }
 
 // 发送消息
@@ -87,6 +93,11 @@ function handleCloseConversation() {
 // 根据 userId 查询参数打开对话
 async function openConversationByUserId(userId: string | number) {
   if (!userId) return
+
+  if (isMobile.value) {
+    router.replace(`/chat/${userId}`)
+    return
+  }
   
   // Keep as string to avoid precision loss with large numbers (snowflake IDs)
   const userIdStr = typeof userId === 'number' ? userId.toString() : userId

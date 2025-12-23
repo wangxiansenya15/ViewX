@@ -22,6 +22,12 @@ export default defineConfig({
         secure: false,
         // Don't rewrite since backend has context-path: /api
         // The request /api/xxx will be proxied to http://localhost:8080/api/xxx
+      },
+      '/rabbitmq-api': {
+        target: 'http://localhost:15672',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/rabbitmq-api/, '/api')
       }
     }
   }

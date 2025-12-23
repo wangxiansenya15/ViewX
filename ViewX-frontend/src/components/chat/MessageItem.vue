@@ -165,10 +165,39 @@ function handleContextMenu(event: MouseEvent) {
   // 已撤回的消息不显示菜单
   if (props.message.isRecalled) return
   
-  menuPosition.value = {
-    x: event.clientX,
-    y: event.clientY
+  // 菜单尺寸估算
+  const menuWidth = 140
+  const menuHeight = canRecall.value ? 120 : 80 // 3项或2项
+  
+  // 获取视口尺寸
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  
+  // 计算菜单位置，确保不超出边界
+  let x = event.clientX
+  let y = event.clientY
+  
+  // 右边界检测
+  if (x + menuWidth > viewportWidth) {
+    x = viewportWidth - menuWidth - 10
   }
+  
+  // 底部边界检测
+  if (y + menuHeight > viewportHeight) {
+    y = viewportHeight - menuHeight - 10
+  }
+  
+  // 左边界检测
+  if (x < 10) {
+    x = 10
+  }
+  
+  // 顶部边界检测
+  if (y < 10) {
+    y = 10
+  }
+  
+  menuPosition.value = { x, y }
   showContextMenu.value = true
 }
 

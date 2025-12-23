@@ -44,6 +44,12 @@ const router = createRouter({
             meta: { keepAlive: true }
         },
         {
+            path: '/chat/:userId',
+            name: 'mobile-chat',
+            component: () => import('../views/mobile/MobileChat.vue'),
+            meta: { hideHeader: true, hideNav: true }
+        },
+        {
             path: '/upload',
             name: 'upload',
             component: UploadView

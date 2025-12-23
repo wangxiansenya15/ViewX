@@ -15,14 +15,13 @@ export interface RegisterDTO {
     verificationCode?: string
 }
 
-// 登录响应 VO
+// 登录响应 VO (匹配后端 UserDTO 结构)
 export interface LoginVO {
+    id: number
     token: string
-    userInfo: {
-        id: number
-        username: string
-        avatar: string
-    }
+    username: string
+    roles?: string[]
+    status?: string
 }
 
 // 视频列表 VO
@@ -204,20 +203,28 @@ export interface ContentVO {
 
 // 认证相关 API
 export const authApi = {
-    login(data: LoginDTO) {
-        return request.post<LoginVO>('/auth/login', data)
+    login(data: LoginDTO, skipErrorHandler = false) {
+        return request.post<LoginVO>('/auth/login', data, {
+            skipErrorHandler
+        } as any)
     },
     register(data: RegisterDTO) {
         return request.post<void>('/auth/register', data)
     },
-    getVerificationCode(email: string) {
-        return request.post<string>('/auth/code', { email })
+    checkUsername(username: string) {
+        return request.get<boolean>('/auth/check-username', { params: { username } })
+    },
+    getVerificationCode(email: string, type?: string) {
+        return request.post<string>('/auth/code', { email, type })
     },
     verifyCode(email: string, code: string) {
         return request.post<void>('/auth/verify', { email, code })
     },
     validateToken(token: string) {
         return request.post<string>('/auth/validate', { token })
+    },
+    resetPassword(data: { email: string, verificationCode: string, newPassword: string }) {
+        return request.post<void>('/auth/reset', data)
     },
     me() {
         return request.get<UserProfileVO>('/user/profile/me')
@@ -482,6 +489,21 @@ export const adminApi = {
     // 删除视频（管理员权限）
     deleteVideoAsAdmin(videoId: number) {
         return request.delete<string>(`/admin/videos/${videoId}`)
+    },
+
+    // 获取仪表盘统计数据
+    getDashboardStats() {
+        return request.get<DashboardStatsVO>('/admin/dashboard/stats')
+    },
+
+    // 创建用户
+    createUser(data: { username: string; password: string; email: string; phone?: string; nickname?: string; role?: string }) {
+        return request.post<number>('/admin/user-management', data)
+    },
+
+    // 删除用户
+    deleteUser(userId: number) {
+        return request.delete<string>(`/admin/user-management/${userId}`)
     }
 }
 
@@ -518,6 +540,18 @@ export interface VideoReviewVO {
     publishedAt?: string
     updatedAt: string
 }
+
+export interface DashboardStatsVO {
+    totalUsers: number
+    userTrend: number
+    totalVideos: number
+    videoTrend: number
+    totalViews: number
+    viewTrend: number
+    storageUsed: number
+    storageTrend: number
+}
+
 
 // 内容相关 API (图片、图片集)
 export const contentApi = {

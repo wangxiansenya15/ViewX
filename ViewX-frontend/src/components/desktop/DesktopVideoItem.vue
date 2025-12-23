@@ -11,13 +11,21 @@
       playsinline
       webkit-playsinline
       preload="metadata"
-      controls
-      controlsList="nodownload"
       @loadedmetadata="onMetadataLoaded"
       @error="onVideoError"
       @play="isPlaying = true"
       @pause="isPlaying = false"
+      @click="togglePlayPause"
     ></video>
+    
+    <!-- 统一的视频控制条 -->
+    <VideoControlBar 
+      :videoElement="videoRef"
+      :isActive="isActive"
+      @play="onPlay"
+      @pause="onPause"
+      @toggle-theater-mode="toggleClearMode"
+    />
     
     <!-- Loading Indicator -->
     <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
@@ -28,14 +36,16 @@
     </div>
     
     <!-- Play/Pause Overlay (Center) -->
-    <div 
-      v-if="!isPlaying"
-      class="absolute inset-0 flex items-center justify-center z-20 cursor-pointer pointer-events-none"
-    >
-      <div class="w-20 h-20 bg-black/40 rounded-full flex items-center justify-center backdrop-blur-sm transition-transform hover:scale-110">
-        <Play class="w-10 h-10 text-white fill-white ml-1.5" />
+    <transition name="fade">
+      <div 
+        v-if="!isPlaying && !isClearMode"
+        class="absolute inset-0 flex items-center justify-center z-20 cursor-pointer pointer-events-none"
+      >
+        <div class="w-20 h-20 bg-black/40 rounded-full flex items-center justify-center backdrop-blur-sm transition-transform hover:scale-110">
+          <Play class="w-10 h-10 text-white fill-white ml-1.5" />
+        </div>
       </div>
-    </div>
+    </transition>
     
     <!-- Video Background (for containment) -->
     <div v-if="objectFitClass === 'object-contain'" class="absolute inset-0 z-[-1]">
@@ -43,79 +53,85 @@
     </div>
 
     <!-- Bottom Gradient Overlay -->
-    <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none z-10"></div>
+    <transition name="fade">
+      <div v-show="!isClearMode" class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none z-10"></div>
+    </transition>
 
     <!-- Bottom Info (Title, Desc, User) -->
-    <div class="absolute bottom-20 left-4 right-[80px] z-30 flex flex-col items-start gap-3 pointer-events-none">
-       <!-- Author Name -->
-       <div class="pointer-events-auto cursor-pointer font-bold text-white text-2xl drop-shadow-md hover:underline transition-all" @click.stop="goToProfile">
-         @{{ video.uploaderNickname }}
-       </div>
-       
-       <!-- Title & Description -->
-       <div class="pointer-events-auto text-left space-y-2">
-          <div v-if="video.title" class="text-white text-lg font-medium leading-relaxed drop-shadow-md">{{ video.title }}</div>
-          <p v-if="video.description" class="text-white/95 text-base line-clamp-2 font-normal leading-snug drop-shadow-md">{{ video.description }}</p>
-       </div>
-    </div>
+    <transition name="fade">
+      <div v-show="!isClearMode" class="absolute bottom-20 left-4 right-[80px] z-30 flex flex-col items-start gap-3 pointer-events-none">
+         <!-- Author Name -->
+         <div class="pointer-events-auto cursor-pointer font-bold text-white text-2xl drop-shadow-md hover:underline transition-all" @click.stop="goToProfile">
+           @{{ video.uploaderNickname }}
+         </div>
+         
+         <!-- Title & Description -->
+         <div class="pointer-events-auto text-left space-y-2">
+            <div v-if="video.title" class="text-white text-lg font-medium leading-relaxed drop-shadow-md">{{ video.title }}</div>
+            <p v-if="video.description" class="text-white/95 text-base line-clamp-2 font-normal leading-snug drop-shadow-md">{{ video.description }}</p>
+         </div>
+      </div>
+    </transition>
 
     <!-- Right Sidebar (Actions) -->
-    <div class="absolute bottom-[120px] right-2 flex flex-col items-center gap-5 pointer-events-auto pb-safe z-40">
-       <!-- Navigation Buttons -->
-       <div class="flex flex-col gap-4 mb-2">
-           <button 
-             @click.stop="$emit('prev')" 
-             :disabled="isFirst"
-             class="p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-           >
-              <ChevronUp class="w-6 h-6" />
+    <transition name="slide-right">
+      <div v-show="!isClearMode" class="absolute bottom-[120px] right-2 flex flex-col items-center gap-5 pointer-events-auto pb-safe z-40">
+         <!-- Navigation Buttons -->
+         <div class="flex flex-col gap-4 mb-2">
+             <button 
+               @click.stop="$emit('prev')" 
+               :disabled="isFirst"
+               class="p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+             >
+                <ChevronUp class="w-6 h-6" />
+             </button>
+             <button 
+               @click.stop="$emit('next')" 
+               :disabled="isLast"
+               class="p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+               >
+                  <ChevronDown class="w-6 h-6" />
+               </button>
+           </div>
+    
+           <!-- Avatar -->
+           <div class="relative mb-3 group active:scale-95 transition-transform" @click.stop="goToProfile">
+             <div class="w-12 h-12 rounded-full border border-white/50 p-0.5 overflow-hidden">
+                <img :src="video.uploaderAvatar" class="w-full h-full rounded-full object-cover" />
+             </div>
+             <div v-if="!isFollowing" @click.stop="toggleFollow" class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-white transition-all hover:scale-110 cursor-pointer">
+                <Plus class="w-3 h-3 text-white" />
+             </div>
+             <div v-else class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md rounded-full w-5 h-5 flex items-center justify-center border border-white/50 transition-all opacity-0 group-hover:opacity-100">
+                 <Check class="w-3 h-3 text-white" />
+             </div>
+           </div>
+    
+           <!-- Like -->
+           <button @click.stop="toggleLike" class="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+              <Heart class="w-8 h-8 drop-shadow-xl transition-all duration-300" :class="isLiked ? 'fill-red-500 text-red-500 scale-110' : 'text-white'" />
+              <span class="text-xs font-semibold text-white drop-shadow-md">{{ formatNumber(video.likeCount) }}</span>
            </button>
-           <button 
-             @click.stop="$emit('next')" 
-             :disabled="isLast"
-             class="p-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-           >
-              <ChevronDown class="w-6 h-6" />
+    
+           <!-- Comment -->
+           <button class="flex flex-col items-center gap-1 group active:scale-90 transition-transform" @click.stop="$emit('open-comments')">
+              <MessageCircle class="w-8 h-8 text-white drop-shadow-xl" />
+              <span class="text-xs font-semibold text-white drop-shadow-md">{{ formatNumber(video.commentCount) }}</span>
            </button>
-       </div>
-
-       <!-- Avatar -->
-       <div class="relative mb-3 group active:scale-95 transition-transform" @click.stop="goToProfile">
-         <div class="w-12 h-12 rounded-full border border-white/50 p-0.5 overflow-hidden">
-            <img :src="video.uploaderAvatar" class="w-full h-full rounded-full object-cover" />
-         </div>
-         <div v-if="!isFollowing" @click.stop="toggleFollow" class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center border border-white transition-all hover:scale-110 cursor-pointer">
-            <Plus class="w-3 h-3 text-white" />
-         </div>
-         <div v-else class="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md rounded-full w-5 h-5 flex items-center justify-center border border-white/50 transition-all opacity-0 group-hover:opacity-100">
-             <Check class="w-3 h-3 text-white" />
-         </div>
-       </div>
-
-       <!-- Like -->
-       <button @click.stop="toggleLike" class="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
-          <Heart class="w-8 h-8 drop-shadow-xl transition-all duration-300" :class="isLiked ? 'fill-red-500 text-red-500 scale-110' : 'text-white'" />
-          <span class="text-xs font-semibold text-white drop-shadow-md">{{ formatNumber(video.likeCount) }}</span>
-       </button>
-
-       <!-- Comment -->
-       <button class="flex flex-col items-center gap-1 group active:scale-90 transition-transform" @click.stop="$emit('open-comments')">
-          <MessageCircle class="w-8 h-8 text-white drop-shadow-xl" />
-          <span class="text-xs font-semibold text-white drop-shadow-md">{{ formatNumber(video.commentCount) }}</span>
-       </button>
-
-       <!-- Star (Favorite) -->
-       <button @click.stop="toggleFavorite" class="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
-          <Star class="w-8 h-8 drop-shadow-xl transition-all duration-300" :class="isFavorited ? 'fill-yellow-500 text-yellow-500 scale-110' : 'text-white'" />
-          <span class="text-xs font-semibold text-white drop-shadow-md">{{ isFavorited ? '已收藏' : '收藏' }}</span>
-       </button>
-
-       <!-- Share -->
-       <button class="flex flex-col items-center gap-1 group active:scale-90 transition-transform" @click.stop>
-          <Share2 class="w-8 h-8 text-white drop-shadow-xl" />
-          <span class="text-xs font-semibold text-white drop-shadow-md">转发</span>
-       </button>
-    </div>
+    
+           <!-- Star (Favorite) -->
+           <button @click.stop="toggleFavorite" class="flex flex-col items-center gap-1 group active:scale-90 transition-transform">
+              <Star class="w-8 h-8 drop-shadow-xl transition-all duration-300" :class="isFavorited ? 'fill-yellow-500 text-yellow-500 scale-110' : 'text-white'" />
+              <span class="text-xs font-semibold text-white drop-shadow-md">{{ isFavorited ? '已收藏' : '收藏' }}</span>
+           </button>
+    
+           <!-- Share -->
+           <button class="flex flex-col items-center gap-1 group active:scale-90 transition-transform" @click.stop>
+              <Share2 class="w-8 h-8 text-white drop-shadow-xl" />
+              <span class="text-xs font-semibold text-white drop-shadow-md">转发</span>
+           </button>
+        </div>
+      </transition>
   </div>
 </template>
 
@@ -124,6 +140,7 @@ import { ref, watch, onMounted } from 'vue'
 import { Plus, Heart, MessageCircle, Star, Share2, Check, ChevronUp, ChevronDown, Play } from 'lucide-vue-next'
 import { interactionApi, type VideoVO } from '@/api'
 import { useRouter } from 'vue-router'
+import VideoControlBar from '@/components/VideoControlBar.vue'
 
 const props = defineProps<{
   video: VideoVO
@@ -143,6 +160,11 @@ const router = useRouter()
 const videoRef = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const isLoading = ref(false)
+const isClearMode = ref(false)
+
+const toggleClearMode = () => {
+    isClearMode.value = !isClearMode.value
+}
 
 // Interaction States
 const isLiked = ref((props.video as any).isLiked || false)
@@ -214,6 +236,23 @@ const pauseVideo = () => {
     if (!videoRef.value) return
     videoRef.value.pause()
     isPlaying.value = false
+}
+
+const togglePlayPause = () => {
+    if (!videoRef.value) return
+    if (isPlaying.value) {
+        pauseVideo()
+    } else {
+        playVideo()
+    }
+}
+
+const onPlay = () => {
+    playVideo()
+}
+
+const onPause = () => {
+    pauseVideo()
 }
 
 const toggleLike = async () => {
@@ -295,3 +334,26 @@ const formatNumber = (num: number) => {
   return num
 }
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+</style>

@@ -55,9 +55,11 @@ class Request {
                         (typeof headers?.get === 'function' && (headers.get('X-Skip-Error-Handler') || headers.get('x-skip-error-handler')));
 
                     if (config?.skipErrorHandler || hasSkipHeader || config?.params?.['_skip_error']) {
+                        // 跳过错误处理，直接 reject，不显示错误消息
                         return Promise.reject(new Error(message || 'Error'))
                     }
 
+                    // 显示错误消息
                     ElMessage.error(message || '系统错误')
                     return Promise.reject(new Error(message || 'Error'))
                 }
@@ -135,7 +137,7 @@ const JSONBigString = JSONBig({ storeAsString: true })
 // 导出实例，baseURL 从环境变量获取
 export default new Request({
     baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
-    timeout: 10000,
+    timeout: 30000, // 增加到 30 秒，因为邮件发送可能较慢
     transformResponse: [
         (data) => {
             try {

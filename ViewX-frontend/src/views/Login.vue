@@ -44,30 +44,98 @@
         <!-- Login Form -->
         <transition name="fade-slide" mode="out-in">
           <form v-if="isLogin" key="login" class="form-section" @submit.prevent="handleLogin">
-            <div class="input-group">
-              <el-input 
-                v-model="loginForm.username" 
-                :placeholder="t('auth.username')" 
-                :prefix-icon="User" 
-                class="glass-input" 
-              />
+            <!-- 登录方式切换 -->
+            <div class="login-mode-switch">
+              <button 
+                type="button" 
+                :class="['mode-btn', { active: loginMode === 'username' }]"
+                @click="loginMode = 'username'"
+              >
+                <el-icon class="mr-1"><User /></el-icon>
+                账号登录
+              </button>
+              <button 
+                type="button" 
+                :class="['mode-btn', { active: loginMode === 'email' }]"
+                @click="loginMode = 'email'"
+              >
+                <el-icon class="mr-1"><Message /></el-icon>
+                邮箱登录
+              </button>
             </div>
-            <div class="input-group">
-              <el-input
-                v-model="loginForm.password"
-                type="password"
-                :placeholder="t('auth.password')"
-                :prefix-icon="Lock"
-                show-password
-                class="glass-input"
-              />
-            </div>
+
+            <!-- 用户名登录表单 -->
+            <template v-if="loginMode === 'username'">
+              <div class="input-group">
+                <el-input 
+                  v-model="loginForm.username" 
+                  :placeholder="t('auth.username')" 
+                  :prefix-icon="User" 
+                  class="glass-input" 
+                />
+              </div>
+              <div class="input-group">
+                <el-input
+                  v-model="loginForm.password"
+                  type="password"
+                  :placeholder="t('auth.password')"
+                  :prefix-icon="Lock"
+                  show-password
+                  class="glass-input"
+                />
+              </div>
+            </template>
+
+            <!-- 邮箱登录表单 -->
+            <template v-else>
+              <div class="input-group">
+                <el-input 
+                  v-model="emailLoginForm.email" 
+                  placeholder="请输入邮箱地址" 
+                  :prefix-icon="Message" 
+                  class="glass-input" 
+                  type="email"
+                />
+              </div>
+              <div class="input-group flex gap-2">
+                <el-input 
+                  v-model="emailLoginForm.verificationCode" 
+                  placeholder="请输入验证码" 
+                  :prefix-icon="Key" 
+                  class="glass-input flex-1" 
+                />
+                <el-button 
+                  type="button" 
+                  :disabled="isLoginCodeCountDown || loginCodeLoading" 
+                  :loading="loginCodeLoading"
+                  @click="handleGetLoginCode" 
+                  class="code-btn"
+                >
+                  {{ isLoginCodeCountDown ? `${loginCodeCountDown}s` : '获取验证码' }}
+                </el-button>
+              </div>
+            </template>
+            
+            <!-- 人机验证组件（仅在需要时显示，且仅用于用户名登录） -->
+            <CaptchaVerification
+              v-if="showCaptcha && loginMode === 'username'"
+              ref="captchaRef"
+              :type="captchaConfig.type"
+              :site-key="captchaConfig.siteKey"
+              theme="light"
+              @verified="onCaptchaVerified"
+              @expired="onCaptchaExpired"
+              @error="onCaptchaError"
+            />
+            
             <div class="actions">
-              <el-checkbox v-model="loginForm.remember" class="glass-checkbox">{{ t('auth.rememberMe') }}</el-checkbox>
-              <a href="#" class="forgot-link">{{ t('auth.forgotPassword') }}</a>
+              <el-checkbox v-if="loginMode === 'username'" v-model="loginForm.remember" class="glass-checkbox">{{ t('auth.rememberMe') }}</el-checkbox>
+              <!-- 邮箱登录时占位，保持布局 -->
+              <div v-else></div>
+              <a href="#" class="forgot-link" @click.prevent="openForgotPassword">{{ t('auth.forgotPassword') }}</a>
             </div>
             <button type="submit" class="submit-btn" :disabled="loading">
-              <span>{{ loading ? 'Signing in...' : t('auth.signIn') }}</span>
+              <span>{{ loading ? '登录中...' : t('auth.signIn') }}</span>
               <div class="liquid-btn-bg"></div>
             </button>
             <div class="switch-auth">
@@ -89,7 +157,20 @@
                 class="glass-input" 
                 name="register-username"
                 autocomplete="off"
-              />
+                :formatter="(value: string) => value.replace(/[^a-zA-Z0-9]/g, '')"
+                maxlength="20"
+                show-word-limit
+                @input="handleUsernameInput"
+              >
+                <template #suffix>
+                  <el-icon v-if="usernameStatus === 'validating'" class="is-loading"><Loading /></el-icon>
+                  <el-icon v-else-if="usernameStatus === 'success'" color="#67C23A"><CircleCheck /></el-icon>
+                  <el-icon v-else-if="usernameStatus === 'error'" color="#F56C6C"><CircleClose /></el-icon>
+                </template>
+              </el-input>
+              <div class="input-tip" :class="{'text-red-500': usernameStatus === 'error', 'text-green-500': usernameStatus === 'success'}">
+                {{ usernameStatusMsg || '账号需4-20位，仅支持字母和数字' }}
+              </div>
             </div>
             <div class="input-group">
               <el-input 
@@ -145,19 +226,76 @@
           </div>
         </div>
       </div>
+
+      <!-- 忘记密码弹窗 -->
+      <el-dialog
+        v-model="showForgotPassword"
+        :title="t('auth.forgotPassword')"
+        width="400px"
+        append-to-body
+        class="glass-dialog"
+      >
+        <el-form :model="forgotPasswordForm" label-position="top">
+          <el-form-item :label="t('auth.email')">
+            <el-input 
+              v-model="forgotPasswordForm.email" 
+              placeholder="请输入邮箱地址" 
+              :prefix-icon="Message"
+            />
+          </el-form-item>
+          <el-form-item label="验证码">
+            <div class="flex gap-2 w-full">
+              <el-input 
+                v-model="forgotPasswordForm.verificationCode" 
+                placeholder="请输入验证码" 
+                :prefix-icon="Key"
+              />
+              <el-button 
+                type="primary" 
+                class="code-btn"
+                :disabled="isResetCodeCountDown || resetCodeLoading"
+                :loading="resetCodeLoading"
+                @click="handleGetResetCode"
+              >
+                {{ isResetCodeCountDown ? `${resetCodeCountDown}s` : '获取验证码' }}
+              </el-button>
+            </div>
+          </el-form-item>
+          <el-form-item label="新密码">
+            <el-input 
+              v-model="forgotPasswordForm.newPassword" 
+              type="password" 
+              placeholder="请输入新密码" 
+              :prefix-icon="Lock"
+              show-password
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="showForgotPassword = false">取消</el-button>
+            <el-button type="primary" :loading="forgotPasswordLoading" @click="handleResetPassword">
+              重置密码
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
-import { User, Lock, Message, Key } from '@element-plus/icons-vue'
+import type { Ref } from 'vue'
+import { User, Lock, Message, Key, Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { Github, ArrowLeft } from 'lucide-vue-next'
 import { authApi } from '@/api'
 import { ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores'
+import CaptchaVerification from '@/components/CaptchaVerification.vue'
+import axios from 'axios'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -168,6 +306,33 @@ const loading = ref(false)
 const codeLoading = ref(false)
 const countDown = ref(60)
 const isCountDown = ref(false)
+const registerTimer = ref<ReturnType<typeof setInterval> | null>(null)
+
+// 登录方式：username 或 email
+const loginMode = ref<'username' | 'email'>('username')
+
+// 邮箱登录表单
+const emailLoginForm = reactive({
+  email: '',
+  verificationCode: ''
+})
+
+// 邮箱登录验证码相关
+const loginCodeLoading = ref(false)
+const loginCodeCountDown = ref(60)
+const isLoginCodeCountDown = ref(false)
+// let loginCodeTimer: ReturnType<typeof setInterval> | null = null
+const loginCodeTimer = ref<ReturnType<typeof setInterval> | null>(null)
+
+// 人机验证相关
+const captchaRef = ref(null)
+const captchaToken = ref('')
+const showCaptcha = ref(false) // 是否显示验证码
+const loginAttempts = ref(0) // 登录尝试次数
+const captchaConfig = reactive({
+  type: 'turnstile',
+  siteKey: '0x4AAAAAACHtJ4y-Bcn20Hjf'
+})
 
 // Particle System
 const particleCanvas = ref<HTMLCanvasElement | null>(null)
@@ -179,6 +344,83 @@ const particles: Particle[] = []
 const PARTICLE_COUNT = 30 // 从80降低到30
 const CONNECTION_DISTANCE = 120 // 从150降低到120
 const MOUSE_DISTANCE = 150 // 从200降低到150
+
+// 倒计时持久化 Key
+const STORAGE_KEY_REGISTER_CODE = 'viewx_register_code_time'
+const STORAGE_KEY_RESET_CODE = 'viewx_reset_code_time'
+const STORAGE_KEY_LOGIN_CODE = 'viewx_login_code_time'
+
+/**
+ * 启动倒计时并保存状态
+ */
+const startCountDownLogic = (
+  storageKey: string,
+  countDownRef: Ref<number>,
+  isCountDownRef: Ref<boolean>,
+  timerRef: Ref<ReturnType<typeof setInterval> | null>
+) => {
+  // 保存结束时间戳
+  const endTime = Date.now() + 60 * 1000
+  localStorage.setItem(storageKey, endTime.toString())
+  
+  isCountDownRef.value = true
+  countDownRef.value = 60
+  
+  if (timerRef.value) clearInterval(timerRef.value)
+  
+  timerRef.value = setInterval(() => {
+    const remaining = Math.ceil((endTime - Date.now()) / 1000)
+    
+    if (remaining <= 0) {
+      if (timerRef.value) clearInterval(timerRef.value)
+      isCountDownRef.value = false
+      countDownRef.value = 60
+      timerRef.value = null
+      localStorage.removeItem(storageKey)
+    } else {
+      countDownRef.value = remaining
+    }
+  }, 1000)
+}
+
+/**
+ * 恢复倒计时状态
+ */
+const restoreCountDownLogic = (
+  storageKey: string,
+  countDownRef: Ref<number>,
+  isCountDownRef: Ref<boolean>,
+  timerRef: Ref<ReturnType<typeof setInterval> | null>
+) => {
+  const storedEndTime = localStorage.getItem(storageKey)
+  if (!storedEndTime) return
+
+  const endTime = parseInt(storedEndTime)
+  const remaining = Math.ceil((endTime - Date.now()) / 1000)
+
+  if (remaining > 0) {
+    isCountDownRef.value = true
+    countDownRef.value = remaining
+    
+    if (timerRef.value) clearInterval(timerRef.value)
+    
+    timerRef.value = setInterval(() => {
+      const currentRemaining = Math.ceil((endTime - Date.now()) / 1000)
+      
+      if (currentRemaining <= 0) {
+        if (timerRef.value) clearInterval(timerRef.value)
+        isCountDownRef.value = false
+        countDownRef.value = 60
+        timerRef.value = null
+        localStorage.removeItem(storageKey)
+      } else {
+        countDownRef.value = currentRemaining
+      }
+    }, 1000)
+  } else {
+    localStorage.removeItem(storageKey)
+  }
+}
 
 class Particle {
   x: number
@@ -234,6 +476,14 @@ class Particle {
 }
 
 onMounted(() => {
+  // 获取人机验证配置
+  fetchCaptchaConfig()
+  
+  // 恢复验证码倒计时
+  restoreCountDownLogic(STORAGE_KEY_REGISTER_CODE, countDown, isCountDown, registerTimer)
+  restoreCountDownLogic(STORAGE_KEY_RESET_CODE, resetCodeCountDown, isResetCodeCountDown, resetTimer)
+  restoreCountDownLogic(STORAGE_KEY_LOGIN_CODE, loginCodeCountDown, isLoginCodeCountDown, loginCodeTimer)
+  
   if (particleCanvas.value) {
     const canvas = particleCanvas.value
     ctx = canvas.getContext('2d')
@@ -293,6 +543,9 @@ onUnmounted(() => {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId)
   }
+  if (resetTimer.value) clearInterval(resetTimer.value)
+  if (loginCodeTimer.value) clearInterval(loginCodeTimer.value)
+  if (registerTimer.value) clearInterval(registerTimer.value)
 })
 
 
@@ -333,6 +586,43 @@ const goBack = () => {
     }
 }
 
+// 获取人机验证配置
+const fetchCaptchaConfig = async () => {
+  try {
+    const response = await axios.get('/api/captcha/config')
+    if (response.data.code === 200 && response.data.data.enabled) {
+      captchaConfig.type = response.data.data.type
+      captchaConfig.siteKey = response.data.data.siteKey
+    }
+  } catch (error) {
+    console.error('获取验证配置失败:', error)
+  }
+}
+
+// 人机验证成功回调
+const onCaptchaVerified = (token: string) => {
+  captchaToken.value = token
+  console.log('人机验证成功')
+}
+
+// 人机验证过期回调
+const onCaptchaExpired = () => {
+  captchaToken.value = ''
+  ElMessage.warning('验证已过期,请重新验证')
+  if (captchaRef.value && (captchaRef.value as any).reset) {
+    (captchaRef.value as any).reset()
+  }
+}
+
+// 人机验证错误回调
+const onCaptchaError = () => {
+  captchaToken.value = ''
+  ElMessage.error('验证失败,请重试')
+  if (captchaRef.value && (captchaRef.value as any).reset) {
+    (captchaRef.value as any).reset()
+  }
+}
+
 const handleGetCode = async () => {
   if (!registerForm.email) {
     ElMessage.warning('请输入邮箱')
@@ -341,19 +631,11 @@ const handleGetCode = async () => {
   
   try {
     codeLoading.value = true
-    await authApi.getVerificationCode(registerForm.email)
+    await authApi.getVerificationCode(registerForm.email, 'register')
     ElMessage.success('验证码已发送')
     
     // Start countdown
-    isCountDown.value = true
-    const timer = setInterval(() => {
-      countDown.value--
-      if (countDown.value <= 0) {
-        clearInterval(timer)
-        isCountDown.value = false
-        countDown.value = 60
-      }
-    }, 1000)
+    startCountDownLogic(STORAGE_KEY_REGISTER_CODE, countDown, isCountDown, registerTimer)
   } catch (error) {
     // Error handled by interceptor
   } finally {
@@ -361,32 +643,127 @@ const handleGetCode = async () => {
   }
 }
 
-const handleLogin = async () => {
-  if (!loginForm.username || !loginForm.password) {
-    ElMessage.warning('请填写完整信息')
+// 账号检测相关状态
+const usernameStatus = ref<'' | 'validating' | 'success' | 'error'>('')
+const usernameStatusMsg = ref('')
+let checkUsernameTimer: any = null
+
+// 防抖函数
+const debounce = (fn: Function, delay: number) => {
+  return (...args: any[]) => {
+    if (checkUsernameTimer) clearTimeout(checkUsernameTimer)
+    checkUsernameTimer = setTimeout(() => {
+      fn.apply(this, args)
+    }, delay)
+  }
+}
+
+// 检查账号可用性
+const checkUsername = async (username: string) => {
+  if (!username) {
+    usernameStatus.value = ''
+    usernameStatusMsg.value = ''
+    return
+  }
+  
+  // 先进行正则校验
+  const usernameRegex = /^[a-zA-Z0-9]{4,20}$/
+  if (!usernameRegex.test(username)) {
+    usernameStatus.value = 'error'
+    usernameStatusMsg.value = '账号格式不正确（4-20位字母或数字）'
     return
   }
 
   try {
+    usernameStatus.value = 'validating'
+    const res = await authApi.checkUsername(username)
+    // 根据后端逻辑：true=可用，false=已存在，但 false 是通过 Result.success(false) 返回的 
+    // 在 request.ts 中，success(false) 也会因为 code=200 而返回 data=false
+    
+    // 修正：后端返回的是 Result<Boolean>。即 res 就是 boolean 值。
+    if (res === true) {
+      usernameStatus.value = 'success'
+      usernameStatusMsg.value = '该账号可用'
+    } else {
+      usernameStatus.value = 'error'
+      usernameStatusMsg.value = '该账号已被注册'
+    }
+  } catch (error: any) {
+     // 如果 request 中将 false 作为业务失败抛出（我们并没有这么做，我们用的 Result.success(false)
+     // 所以应该不会走到这里，除非网络错误
+     // 但为了保险，检查 data
+     if (axios.isAxiosError(error)) {
+        usernameStatus.value = 'error'
+        usernameStatusMsg.value = '网络错误，无法检测'
+     }
+  }
+}
+
+const handleUsernameInput = debounce((value: string) => {
+  checkUsername(value)
+}, 500)
+
+const handleLogin = async () => {
+  // 根据登录方式验证不同的字段
+  if (loginMode.value === 'username') {
+    if (!loginForm.username || !loginForm.password) {
+      ElMessage.warning('请填写完整信息')
+      return
+    }
+
+    // 如果显示了验证码但未完成，则提示
+    if (showCaptcha.value && !captchaToken.value) {
+      ElMessage.warning('请完成人机验证')
+      return
+    }
+  } else {
+    // 邮箱登录验证
+    if (!emailLoginForm.email || !emailLoginForm.verificationCode) {
+      ElMessage.warning('请填写邮箱和验证码')
+      return
+    }
+  }
+
+  try {
     loading.value = true
-    const res = await authApi.login({
-      username: loginForm.username,
-      password: loginForm.password
-    })
+    
+    let res
+    if (loginMode.value === 'username') {
+      // 用户名密码登录
+      loginAttempts.value++
+      
+      res = await authApi.login({
+        username: loginForm.username,
+        password: loginForm.password,
+        captchaToken: captchaToken.value || undefined // 如果没有验证码则不传
+      } as any, true) // 跳过自动错误处理，手动处理
+    } else {
+      // 邮箱验证码登录
+      res = await authApi.login({
+        email: emailLoginForm.email,
+        verificationCode: emailLoginForm.verificationCode
+      } as any, true) // 跳过自动错误处理
+    }
+    
+    // 登录成功，重置状态
+    loginAttempts.value = 0
+    showCaptcha.value = false
+    captchaToken.value = ''
     
     // 保存用户信息到 store
     const userStore = useUserStore()
+    
+    // 后端返回的是 UserDTO 结构: { id, token, username, roles, status }
+    // 需要适配前端的存储格式
     userStore.setToken(res.token)
     
-    // 从登录响应中提取用户信息并保存
-    if (res.userInfo) {
-      userStore.setUserInfo({
-        id: res.userInfo.id,
-        username: res.userInfo.username,
-        nickname: res.userInfo.username, // 使用 username 作为 nickname
-        avatar: res.userInfo.avatar || ''
-      })
-    }
+    // 构建用户信息对象
+    userStore.setUserInfo({
+      id: res.id,
+      username: res.username,
+      nickname: res.username, // UserDTO 没有 nickname，使用 username
+      avatar: '' // UserDTO 没有 avatar，设为空字符串
+    })
     
     ElMessage.success('登录成功')
     
@@ -398,8 +775,31 @@ const handleLogin = async () => {
     } else {
         emit('login-success')
     }
-  } catch (error) {
-    // Error handled by interceptor
+  } catch (error: any) {
+    console.error('登录失败:', error)
+    
+    // 重置验证码
+    captchaToken.value = ''
+    if (captchaRef.value && (captchaRef.value as any).reset) {
+      (captchaRef.value as any).reset()
+    }
+    
+    // 优先检查后端是否明确要求验证码
+    const errorMessage = error.response?.data?.message || error.message || ''
+    if (errorMessage.includes('人机验证') || errorMessage.includes('验证')) {
+      // 需要人机验证，只显示验证码组件和友好提示，不显示错误消息
+      showCaptcha.value = true
+      ElMessage.warning('为了您的账号安全，请完成人机验证')
+    } else {
+      // 其他错误（如密码错误），显示错误消息
+      ElMessage.error(errorMessage || '登录失败，请重试')
+      
+      // 如果不是验证码问题，则根据尝试次数决定是否显示验证码
+      if (loginAttempts.value >= 2) {
+        showCaptcha.value = true
+        ElMessage.warning('登录失败，请完成人机验证')
+      }
+    }
   } finally {
     loading.value = false
   }
@@ -408,6 +808,13 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   if (!registerForm.email || !registerForm.password || !registerForm.username || !registerForm.verificationCode) {
     ElMessage.warning('请填写完整信息')
+    return
+  }
+
+  // 账号格式校验
+  const usernameRegex = /^[a-zA-Z0-9]{4,20}$/
+  if (!usernameRegex.test(registerForm.username)) {
+    ElMessage.warning('账号格式不正确：需4-20位，仅支持字母和数字')
     return
   }
 
@@ -426,6 +833,114 @@ const handleRegister = async () => {
     // Error handled by interceptor
   } finally {
     loading.value = false
+  }
+}
+
+// 忘记密码相关逻辑
+const showForgotPassword = ref(false)
+const forgotPasswordForm = reactive({
+  email: '',
+  verificationCode: '',
+  newPassword: ''
+})
+
+const openForgotPassword = () => {
+  showForgotPassword.value = true
+  // 简单的邮箱正则检查
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  // 如果登录框的用户名是邮箱格式，则自动填充
+  if (loginForm.username && emailRegex.test(loginForm.username)) {
+    forgotPasswordForm.email = loginForm.username
+  }
+}
+const forgotPasswordLoading = ref(false)
+const resetCodeLoading = ref(false)
+const resetCodeCountDown = ref(60)
+const isResetCodeCountDown = ref(false)
+// let resetTimer: ReturnType<typeof setInterval> | null = null
+const resetTimer = ref<ReturnType<typeof setInterval> | null>(null)
+
+const handleGetResetCode = async () => {
+  if (!forgotPasswordForm.email) {
+    ElMessage.warning('请输入邮箱')
+    return
+  }
+  
+  // 防止重复点击
+  if (isResetCodeCountDown.value || resetCodeLoading.value) return
+
+  try {
+    resetCodeLoading.value = true
+    // 发送重置密码验证码，指定类型为 reset
+    await authApi.getVerificationCode(forgotPasswordForm.email, 'reset')
+    ElMessage.success('验证码已发送，请查收邮件')
+
+    // Start countdown
+    startCountDownLogic(STORAGE_KEY_RESET_CODE, resetCodeCountDown, isResetCodeCountDown, resetTimer)
+  } catch (error: any) {
+    console.error('发送验证码失败', error)
+    ElMessage.error(error.message || '发送验证码失败，请稍后重试')
+  } finally {
+    resetCodeLoading.value = false
+  }
+}
+
+// 获取登录验证码
+const handleGetLoginCode = async () => {
+  if (!emailLoginForm.email) {
+    ElMessage.warning('请输入邮箱')
+    return
+  }
+  
+  // 防止重复点击
+  if (isLoginCodeCountDown.value || loginCodeLoading.value) return
+
+  try {
+    loginCodeLoading.value = true
+    // 发送登录验证码，指定类型为 login
+    await authApi.getVerificationCode(emailLoginForm.email, 'login')
+    ElMessage.success('验证码已发送，请查收邮件')
+
+    // Start countdown
+    startCountDownLogic(STORAGE_KEY_LOGIN_CODE, loginCodeCountDown, isLoginCodeCountDown, loginCodeTimer)
+  } catch (error: any) {
+    console.error('发送登录验证码失败', error)
+    ElMessage.error(error.message || '发送验证码失败，请稍后重试')
+  } finally {
+    loginCodeLoading.value = false
+  }
+}
+
+// 移除这里的旧 onUnmounted，合并到上面的 onUnmounted 中
+// onUnmounted(() => {
+//   if (resetTimer) clearInterval(resetTimer)
+//   if (loginCodeTimer) clearInterval(loginCodeTimer)
+//   // ... 其他清理逻辑
+// })
+
+const handleResetPassword = async () => {
+  if (!forgotPasswordForm.email || !forgotPasswordForm.verificationCode || !forgotPasswordForm.newPassword) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+
+  try {
+    forgotPasswordLoading.value = true
+    await authApi.resetPassword({
+      email: forgotPasswordForm.email,
+      verificationCode: forgotPasswordForm.verificationCode,
+      newPassword: forgotPasswordForm.newPassword
+    })
+    ElMessage.success('密码重置成功，请使用新密码登录')
+    showForgotPassword.value = false
+    // 清空表单
+    forgotPasswordForm.email = ''
+    forgotPasswordForm.verificationCode = ''
+    forgotPasswordForm.newPassword = ''
+  } catch (error) {
+    console.error('重置密码失败', error)
+  } finally {
+    forgotPasswordLoading.value = false
   }
 }
 
@@ -989,5 +1504,128 @@ const handleGithubLogin = () => {
       text-decoration: underline;
     }
   }
+}
+</style>
+
+<style>
+.glass-dialog {
+  background: rgba(30, 30, 35, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.glass-dialog .el-dialog__header {
+  margin-right: 0 !important;
+  padding: 20px 20px 10px !important;
+}
+
+.glass-dialog .el-dialog__title {
+  color: #fff !important;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+}
+
+.glass-dialog .el-dialog__body {
+  padding: 10px 20px 20px !important;
+}
+
+.glass-dialog .el-form-item__label {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 0.9rem !important;
+}
+
+.glass-dialog .el-input__wrapper {
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  padding: 1px 11px !important;
+  transition: all 0.3s ease !important;
+}
+
+.glass-dialog .el-input__wrapper:hover,
+.glass-dialog .el-input__wrapper.is-focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+}
+
+.glass-dialog .el-input__inner {
+  color: #fff !important;
+  height: 36px !important;
+}
+
+.glass-dialog .el-input__inner::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.glass-dialog .el-dialog__footer {
+  padding: 10px 20px 20px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.glass-dialog .code-btn {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.glass-dialog .code-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+</style>
+
+<style scoped>
+.login-mode-switch {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  backdrop-filter: blur(10px);
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.code-btn {
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.input-tip {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+  margin-left: 4px;
 }
 </style>

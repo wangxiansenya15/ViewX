@@ -20,9 +20,12 @@
         class="close-btn" 
         link 
         @click="$emit('close')"
-        title="关闭会话"
+        :title="showBack ? '返回' : '关闭会话'"
       >
-        <el-icon :size="20"><Close /></el-icon>
+        <el-icon :size="20">
+            <ArrowLeft v-if="showBack" />
+            <Close v-else />
+        </el-icon>
       </el-button>
     </div>
 
@@ -58,7 +61,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, computed } from 'vue'
-import { Loading, Close } from '@element-plus/icons-vue'
+import { Loading, Close, ArrowLeft } from '@element-plus/icons-vue'
 import type { ConversationVO, MessageVO } from '@/api'
 import MessageItem from './MessageItem.vue'
 import MessageInput from './MessageInput.vue'
@@ -69,6 +72,7 @@ interface Props {
   messages: MessageVO[]
   isTyping: boolean
   loading: boolean
+  showBack?: boolean
 }
 
 const props = defineProps<Props>()

@@ -12,6 +12,8 @@
       webkit-playsinline
       preload="metadata"
       @click="togglePlay"
+      @touchstart="handleTouchStart"
+      @touchend="handleTouchEnd"
       @loadedmetadata="onMetadataLoaded"
       @timeupdate="onTimeUpdate"
       @error="onVideoError"
@@ -20,6 +22,7 @@
       @waiting="onWaiting"
       @stalled="onStalled"
     ></video>
+    
     
     <!-- Loading Indicator -->
     <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
@@ -55,25 +58,48 @@
       </div>
     </div>
 
-    <!-- Bottom Gradient Overlay -->
-    <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none z-20"></div>
+    <!-- Bottom Gradient Overlay - Extended for better readability -->
+    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent pointer-events-none z-20" style="height: calc(60px + 12rem);"></div>
 
-    <!-- Bottom Info (Title, Desc, User) -->
-    <div class="absolute bottom-4 left-4 right-[80px] z-30 flex flex-col items-start gap-3 pointer-events-none">
+    <!-- Bottom Info (Title, Desc, User) - Compact layout -->
+    <div class="absolute left-4 right-[80px] z-30 flex flex-col items-start gap-1.5 pointer-events-none" style="bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);">
        <!-- Author Name -->
-       <div class="pointer-events-auto cursor-pointer font-bold text-white text-2xl drop-shadow-md hover:underline transition-all" @click.stop="goToProfile">
+       <div class="pointer-events-auto cursor-pointer font-bold text-white text-lg drop-shadow-lg hover:underline transition-all flex-shrink-0" @click.stop="goToProfile">
          @{{ video.uploaderNickname }}
        </div>
        
-       <!-- Title & Description -->
-       <div class="pointer-events-auto text-left space-y-2">
-          <div v-if="video.title" class="text-white text-lg font-medium leading-relaxed drop-shadow-md">{{ video.title }}</div>
-          <p v-if="video.description" class="text-white/95 text-base line-clamp-2 font-normal leading-snug drop-shadow-md">{{ video.description }}</p>
+       <!-- Title (1 line only) -->
+       <div v-if="video.title" class="text-white text-sm font-semibold leading-tight drop-shadow-lg line-clamp-1 w-full pointer-events-auto">
+         {{ video.title }}
+       </div>
+       
+       <!-- Expandable Description -->
+       <div 
+         class="w-full relative pointer-events-auto"
+         @click.stop="toggleDescription" 
+       >
+         <div 
+           v-if="video.description" 
+           class="text-white/90 text-sm font-normal leading-relaxed drop-shadow-lg transition-all duration-300"
+         >
+           <div :class="isDescExpanded ? 'max-h-[30vh] overflow-y-auto pb-6' : 'line-clamp-1 pr-10'">
+             {{ video.description }}
+           </div>
+           
+           <!-- Toggle Button -->
+           <button 
+             v-if="video.description && video.description.length > 20"
+             class="font-bold text-white text-xs active:scale-95 transition-transform hover:opacity-80"
+             :class="isDescExpanded ? 'absolute bottom-0 right-0 p-1 bg-black/40 rounded backdrop-blur-sm' : 'absolute right-0 top-0 h-full flex items-center bg-gradient-to-l from-black/80 to-transparent pl-4'"
+           >
+             {{ isDescExpanded ? '收起' : '展开' }}
+           </button>
+         </div>
        </div>
     </div>
 
-    <!-- Right Sidebar (Actions) -->
-    <div class="absolute bottom-[80px] right-2 flex flex-col items-center gap-5 pointer-events-auto pb-safe z-40">
+    <!-- Right Sidebar (Actions) - Above bottom nav -->
+    <div class="absolute right-2 flex flex-col items-center gap-5 pointer-events-auto z-40" style="bottom: calc(env(safe-area-inset-bottom, 0px) + 120px);">
        <!-- Avatar -->
        <!-- Avatar -->
        <div class="relative mb-3 group active:scale-95 transition-transform" @click.stop="goToProfile">
@@ -132,6 +158,15 @@
            </div>
         </transition>
     </div>
+
+    <!-- 移动端专用视频控制条 - 放在最后以确保层级最高 -->
+    <MobileVideoControlBar 
+      ref="controlBarRef"
+      :video-element="videoRef"
+      :is-active="isActive"
+      @play="onPlay"
+      @pause="onPause"
+    />
   </div>
 </template>
 
@@ -140,6 +175,8 @@ import { ref, watch, onMounted } from 'vue'
 import { Plus, Heart, MessageCircle, Star, Share2, Play, Music, Check } from 'lucide-vue-next'
 import { interactionApi, type VideoVO } from '@/api'
 import { useRouter } from 'vue-router'
+import MobileVideoControlBar from '@/components/mobile/MobileVideoControlBar.vue'
+import { useVideoPlayerStore } from '@/stores/videoPlayer'
 
 const props = defineProps<{
   video: VideoVO
@@ -149,6 +186,7 @@ const props = defineProps<{
 
 const router = useRouter()
 const videoRef = ref<HTMLVideoElement | null>(null)
+const controlBarRef = ref<InstanceType<typeof MobileVideoControlBar> | null>(null)
 const isPlaying = ref(false)
 const isLoading = ref(false)
 
@@ -165,10 +203,20 @@ const currentTime = ref(0)
 const progressPercent = ref(0)
 const isDragging = ref(false)
 
+// Description Expand State
+const isDescExpanded = ref(false)
+const toggleDescription = () => {
+    isDescExpanded.value = !isDescExpanded.value
+}
+
 // Double Tap Logic
 let lastTapTime = 0
 const heartAnimations = ref<{id: number, x: number, y: number, angle: number}[]>([])
 let heartIdCounter = 0
+
+// Long Press Logic for Speed Control
+let longPressTimer: any = null
+const LONG_PRESS_DURATION = 500 // 500ms
 
 // Fetch interaction status when active or mounted
 const fetchInteractionStatus = async () => {
@@ -240,6 +288,42 @@ const onStalled = () => {
   isLoading.value = true
 }
 
+// Touch event handlers for long-press speed control
+const handleTouchStart = (e: TouchEvent) => {
+  if (!videoRef.value) return
+  
+  const touch = e.touches[0]
+  
+  // 检查是否点击在屏幕中心区域 (中间 1/3)
+  const rect = videoRef.value.getBoundingClientRect()
+  const centerX = rect.width / 2
+  const centerY = rect.height / 2
+  const touchX = touch.clientX - rect.left
+  const touchY = touch.clientY - rect.top
+  
+  const isInCenterX = touchX > centerX - rect.width / 6 && touchX < centerX + rect.width / 6
+  const isInCenterY = touchY > centerY - rect.height / 6 && touchY < centerY + rect.height / 6
+  
+  if (isInCenterX && isInCenterY) {
+    // 在中心区域，启动长按检测
+    longPressTimer = setTimeout(() => {
+      // 触发倍速弹窗
+      if (controlBarRef.value) {
+        controlBarRef.value.showSpeedPopup()
+      }
+      longPressTimer = null
+    }, LONG_PRESS_DURATION)
+  }
+}
+
+const handleTouchEnd = () => {
+  // 清除长按计时器
+  if (longPressTimer) {
+    clearTimeout(longPressTimer)
+    longPressTimer = null
+  }
+}
+
 // Double tap handler
 // Double tap handler
 let singleTapTimer: any = null
@@ -300,23 +384,30 @@ const handleDoubleTap = (e: MouseEvent | TouchEvent) => {
     }
 }
 
+const playerStore = useVideoPlayerStore()
+
 const playVideo = () => {
     if (!videoRef.value) return
     if (!props.video.videoUrl) return
     
-    // 先静音播放,确保视频能播放
-    videoRef.value.muted = true
+    // 应用全局音量和播放速度设置
+    videoRef.value.volume = playerStore.isMuted ? 0 : playerStore.volume
+    videoRef.value.muted = playerStore.isMuted
+    videoRef.value.playbackRate = playerStore.playbackRate
+    
     videoRef.value.play()
-      .then(() => {
-        // 播放成功后,立即尝试取消静音
-        if (videoRef.value) {
-          videoRef.value.muted = false
-        }
-      })
       .catch(e => {
         console.error('Play failed', e)
       })
     isPlaying.value = true
+}
+
+const onPlay = () => {
+    playVideo()
+}
+
+const onPause = () => {
+    pauseVideo()
 }
 
 const pauseVideo = () => {

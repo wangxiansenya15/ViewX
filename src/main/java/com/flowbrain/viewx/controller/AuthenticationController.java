@@ -7,6 +7,7 @@ import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.service.AuthenticationService;
 import com.flowbrain.viewx.service.EmailService;
 import com.flowbrain.viewx.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,8 +31,38 @@ public class AuthController {
     @PostMapping("/code")
     public Result<String> getVerificationCode(@RequestBody Map<String, String> payload) {
         String email = payload.get("email");
-        String code = emailService.sendVerificationCode(email);
+        String type = payload.getOrDefault("type", "register"); // 默认为注册
+
+        // 根据类型选择邮件模板
+        EmailService.EmailType emailType = switch (type.toLowerCase()) {
+            case "reset", "reset_password" -> EmailService.EmailType.RESET_PASSWORD;
+            case "login" -> EmailService.EmailType.LOGIN_VERIFY;
+            default -> EmailService.EmailType.REGISTER;
+        };
+
+        String code = emailService.sendVerificationCode(email, emailType);
         return Result.success(code, "验证码已发送");
+    }
+
+    /**
+     * 检查账号是否可用
+     * 
+     * @param username 账号
+     * @return boolean true表示可用，false表示已存在
+     */
+    @GetMapping("/check-username")
+    public Result<Boolean> checkUsername(@RequestParam String username) {
+        if (username == null || username.trim().isEmpty()) {
+            return Result.badRequest("账号不能为空");
+        }
+
+        boolean exists = userService.existsByUsername(username);
+        // 如果存在，说明不可用(false)；如果不存在，说明可用(true)
+        if (exists) {
+            return Result.success("账号已存在", false);
+        } else {
+            return Result.success("账号可用", true);
+        }
     }
 
     @PostMapping("/register")
@@ -64,9 +95,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Result<?> login(@RequestBody UserDTO userDTO) {
+    public Result<?> login(@RequestBody UserDTO userDTO, HttpServletRequest request) {
         log.info("开始处理登录请求，用户名: {}", userDTO.getUsername());
-        return authService.authenticate(userDTO);
+        return authService.authenticate(userDTO, request);
     }
 
     /**

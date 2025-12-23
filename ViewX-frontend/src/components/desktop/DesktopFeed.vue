@@ -129,6 +129,14 @@ watch(() => props.videos.length, (newLength, oldLength) => {
 
 // Keyboard navigation
 const handleKeydown = (e: KeyboardEvent) => {
+  // 如果焦点在输入框或可编辑元素上，不触发快捷键
+  const target = e.target as HTMLElement;
+  if (target.tagName === 'INPUT' || 
+      target.tagName === 'TEXTAREA' || 
+      target.isContentEditable) {
+    return;
+  }
+
   if (e.key === 'ArrowUp') {
     e.preventDefault()
     scrollToIndex(currentIndex.value - 1)
