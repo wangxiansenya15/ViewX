@@ -53,4 +53,27 @@ public interface AdminService {
      * @return 操作结果
      */
     Result<String> deleteVideo(Long videoId);
+
+    /**
+     * 获取仪表盘统计数据
+     * 
+     * @return 统计数据
+     */
+    Result<com.flowbrain.viewx.pojo.vo.DashboardStatsVO> getDashboardStats();
+
+    /**
+     * 创建用户
+     *
+     * @param dto 用户创建信息
+     * @return 用户ID
+     */
+    Result<Long> createUser(com.flowbrain.viewx.pojo.dto.AdminCreateUserDTO dto);
+
+    /**
+     * 删除用户
+     *
+     * @param userId 用户ID
+     * @return 操作结果
+     */
+    Result<String> deleteUser(Long userId);
 }

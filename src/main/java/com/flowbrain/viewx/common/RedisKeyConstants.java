@@ -142,6 +142,26 @@ public class RedisKeyConstants {
     }
 
     /**
+     * 安全相关的Key构建方法
+     */
+    public static class Security {
+        // 登录失败次数记录
+        public static String getLoginFailureKey(String username, String ipAddress) {
+            return buildKey("security:login:failure:", username, ":", ipAddress);
+        }
+
+        // 请求频率限制
+        public static String getRequestRateKey(String ipAddress) {
+            return buildKey("security:request:rate:", ipAddress);
+        }
+
+        // 已知设备记录
+        public static String getKnownDeviceKey(String username, String ipAddress) {
+            return buildKey("security:known:device:", username, ":", ipAddress);
+        }
+    }
+
+    /**
      * 推荐系统相关的Key构建方法
      */
     public static class Recommend {

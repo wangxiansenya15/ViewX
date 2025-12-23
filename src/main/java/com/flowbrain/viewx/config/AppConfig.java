@@ -8,6 +8,11 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = {"com.flowbrain.viewx.dao", "com.flowbrain.viewx.service", "com.flowbrain.viewx.util"})
+@ComponentScan(basePackages = { "com.flowbrain.viewx.dao", "com.flowbrain.viewx.service", "com.flowbrain.viewx.util" })
 public class AppConfig {
+
+    @org.springframework.context.annotation.Bean
+    public org.springframework.web.client.RestTemplate restTemplate() {
+        return new org.springframework.web.client.RestTemplate();
+    }
 }

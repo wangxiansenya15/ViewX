@@ -7,6 +7,7 @@ import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.service.AuthenticationService;
 import com.flowbrain.viewx.service.EmailService;
 import com.flowbrain.viewx.service.UserService;
+import com.flowbrain.viewx.service.UsernameCheckService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -16,16 +17,21 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth")
 @Slf4j
-public class AuthController {
+public class AuthenticationController {
     private final UserService userService;
     private final AuthenticationService authService;
     private final EmailService emailService;
+    private final UsernameCheckService usernameCheckService;
 
     // 推荐使用构造函数注入
-    public AuthController(UserService userService, AuthenticationService authService, EmailService emailService) {
+    public AuthenticationController(UserService userService,
+            AuthenticationService authService,
+            EmailService emailService,
+            UsernameCheckService usernameCheckService) {
         this.userService = userService;
         this.authService = authService;
         this.emailService = emailService;
+        this.usernameCheckService = usernameCheckService;
     }
 
     @PostMapping("/code")
@@ -46,6 +52,7 @@ public class AuthController {
 
     /**
      * 检查账号是否可用
+     * 使用缓存优化，减少数据库查询压力
      * 
      * @param username 账号
      * @return boolean true表示可用，false表示已存在
@@ -56,7 +63,8 @@ public class AuthController {
             return Result.badRequest("账号不能为空");
         }
 
-        boolean exists = userService.existsByUsername(username);
+        // 使用带缓存的服务，减少数据库压力
+        boolean exists = usernameCheckService.checkUsernameExists(username);
         // 如果存在，说明不可用(false)；如果不存在，说明可用(true)
         if (exists) {
             return Result.success("账号已存在", false);

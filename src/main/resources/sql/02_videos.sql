@@ -57,13 +57,7 @@ CREATE TABLE vx_videos (
                         deleted_at TIMESTAMP
 );
 
-CREATE INDEX idx_videos_uploader ON vx_videos(uploader_id);
-CREATE INDEX idx_videos_category ON vx_videos(category);
-CREATE INDEX idx_videos_created_at ON vx_videos(created_at DESC);
-CREATE INDEX idx_videos_status ON vx_videos(status);
-CREATE INDEX idx_videos_ai_tags ON vx_videos USING GIN (ai_tags);
-CREATE INDEX idx_videos_embedding ON vx_videos USING ivfflat (content_embedding vector_cosine_ops);
-CREATE INDEX idx_videos_trending ON vx_videos (created_at DESC, view_count DESC) WHERE status = 'APPROVED';
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理
 
 -- 视频分析表
 CREATE TABLE vx_video_analytics (
@@ -95,5 +89,4 @@ CREATE TABLE vx_video_analytics (
                                  UNIQUE(video_id)
 );
 
-CREATE INDEX idx_video_analytics_video_id ON vx_video_analytics(video_id);
-CREATE INDEX idx_video_analytics_trending ON vx_video_analytics(trending_score DESC);
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理

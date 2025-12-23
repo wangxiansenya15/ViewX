@@ -1,0 +1,26 @@
+[Unit]
+Description=ViewX Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=viewx
+# 修改为实际的 jar 包路径
+ExecStart=/usr/bin/java \
+    -Xms256m \
+    -Xmx512m \
+    -Xss256k \
+    -XX:+UseG1GC \
+    -jar /var/www/viewx/viewx-backend.jar \
+    --spring.profiles.active=prod
+
+# 自动重启配置
+Restart=always
+RestartSec=10
+
+# 日志输出（可选，已在应用层配置日志文件）
+StandardOutput=syslog
+StandardError=syslog
+
+[Install]
+WantedBy=multi-user.target

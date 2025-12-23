@@ -85,4 +85,36 @@ public class AdminController {
         log.info("管理员删除视频，视频ID: {}", id);
         return adminService.deleteVideo(id);
     }
+
+    /**
+     * 获取仪表盘统计数据
+     * GET /admin/dashboard/stats
+     */
+    @GetMapping("/dashboard/stats")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN', 'REVIEWER')")
+    public Result<com.flowbrain.viewx.pojo.vo.DashboardStatsVO> getDashboardStats() {
+        return adminService.getDashboardStats();
+    }
+
+    /**
+     * 创建用户（管理员权限）
+     * POST /admin/user-management
+     */
+    @PostMapping("/user-management")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public Result<Long> createUser(@RequestBody com.flowbrain.viewx.pojo.dto.AdminCreateUserDTO dto) {
+        log.info("管理员创建用户，用户名: {}", dto.getUsername());
+        return adminService.createUser(dto);
+    }
+
+    /**
+     * 删除用户（管理员权限）
+     * DELETE /admin/user-management/{id}
+     */
+    @DeleteMapping("/user-management/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public Result<String> deleteUser(@PathVariable Long id) {
+        log.info("管理员删除用户，用户ID: {}", id);
+        return adminService.deleteUser(id);
+    }
 }

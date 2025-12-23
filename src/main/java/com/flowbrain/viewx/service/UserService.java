@@ -375,4 +375,42 @@ public class UserService {
             return Result.serverError("搜索用户失败");
         }
     }
+
+    /**
+     * 锁定账户
+     * 
+     * @param userId 用户ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void lockAccount(Long userId) {
+        log.warn("锁定账户 - 用户ID: {}", userId);
+        User user = userMapper.selectById(userId);
+        if (user != null) {
+            userMapper.updateStatus(
+                    userId,
+                    user.isEnabled(),
+                    user.isAccountNonExpired(),
+                    false, // 锁定账户
+                    user.isCredentialsNonExpired());
+        }
+    }
+
+    /**
+     * 解锁账户（登录成功后调用）
+     * 
+     * @param userId 用户ID
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void unlockAccount(Long userId) {
+        log.info("解锁账户 - 用户ID: {}", userId);
+        User user = userMapper.selectById(userId);
+        if (user != null && !user.isAccountNonLocked()) {
+            userMapper.updateStatus(
+                    userId,
+                    user.isEnabled(),
+                    user.isAccountNonExpired(),
+                    true, // 解锁账户
+                    user.isCredentialsNonExpired());
+        }
+    }
 }

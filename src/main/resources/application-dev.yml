@@ -117,3 +117,10 @@ logging:
     com.flowbrain.viewx: DEBUG
     org.springframework.security: DEBUG
     org.springframework.web: DEBUG
+
+# 人机验证配置 - 开发环境
+captcha:
+  enabled: true
+  type: turnstile
+  site-key: 0x4AAAAAACHtJ4y-Bcn20Hjf
+  secret-key: 0x4AAAAAACHtJwgeTinozz8z3v3_vjFa7rw

@@ -41,7 +41,65 @@ public class AuthenticationService {
     @Autowired
     private RedisTemplate<String, String> stringRedisTemplate;
 
-    public Result<UserDTO> authenticate(UserDTO userDTO) {
+    @Autowired
+    private CaptchaService captchaService;
+
+    @Autowired
+    private RiskAssessmentService riskAssessmentService;
+
+    @Autowired
+    private SecurityAuditService securityAuditService;
+
+    public Result<UserDTO> authenticate(UserDTO userDTO, jakarta.servlet.http.HttpServletRequest request) {
+        // 1. 获取客户端信息
+        String ipAddress = com.flowbrain.viewx.util.HttpRequestUtils.getClientIpAddress(request);
+        String userAgent = com.flowbrain.viewx.util.HttpRequestUtils.getUserAgent(request);
+
+        log.info("登录请求 - 用户名/邮箱: {}, IP: {}, UA: {}",
+                userDTO.getUsername() != null ? userDTO.getUsername() : userDTO.getEmail(),
+                ipAddress, userAgent);
+
+        // 检测登录方式：如果提供了验证码，则使用邮箱验证码登录
+        boolean isEmailCodeLogin = (userDTO.getVerificationCode() != null &&
+                !userDTO.getVerificationCode().trim().isEmpty());
+
+        if (isEmailCodeLogin) {
+            // 邮箱验证码登录流程
+            return authenticateWithEmailCode(userDTO, ipAddress, userAgent, request);
+        }
+
+        // 2. 风险评估（用户名密码登录）
+        com.flowbrain.viewx.common.enums.RiskLevel riskLevel = riskAssessmentService.assessLoginRisk(
+                userDTO.getUsername(), ipAddress, userAgent);
+
+        log.info("风险评估完成 - 用户名: {}, 风险等级: {}", userDTO.getUsername(), riskLevel.getLabel());
+
+        // 3. 根据风险等级决定是否需要人机验证
+        if (riskLevel == com.flowbrain.viewx.common.enums.RiskLevel.MEDIUM ||
+                riskLevel == com.flowbrain.viewx.common.enums.RiskLevel.HIGH) {
+
+            // 中高风险需要验证 CAPTCHA
+            boolean captchaVerified = captchaService.verifyCaptcha(userDTO.getCaptchaToken(), ipAddress);
+            if (!captchaVerified) {
+                log.warn("人机验证失败 - 用户名: {}, IP: {}, 风险等级: {}",
+                        userDTO.getUsername(), ipAddress, riskLevel.getLabel());
+
+                // 注意：这里不记录登录失败次数，因为这不是密码错误，只是需要完成人机验证
+                // 只记录审计日志即可
+                securityAuditService.recordCaptchaFailure(userDTO.getUsername(), ipAddress,
+                        "turnstile", riskLevel);
+                securityAuditService.recordLoginAttempt(null, userDTO.getUsername(), false,
+                        "需要人机验证", ipAddress, userAgent, riskLevel, true, false);
+
+                // 返回明确的验证码错误，让前端知道需要显示验证码
+                return Result.badRequest("请完成人机验证后重试");
+            }
+            log.info("人机验证通过 - 用户名: {}, 风险等级: {}", userDTO.getUsername(), riskLevel.getLabel());
+        } else {
+            log.info("低风险请求，跳过人机验证 - 用户名: {}", userDTO.getUsername());
+        }
+
+        // 4. 执行身份认证
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(userDTO.getUsername(), userDTO.getPassword()));
@@ -73,26 +131,82 @@ public class AuthenticationService {
 
             UserDTO responseUserDTO = new UserDTO(user.getId(), token, userDetails.getUsername(), roles, userStatus);
 
+            // 5. 登录成功后的风险记录更新
+            riskAssessmentService.clearLoginFailure(userDTO.getUsername(), ipAddress);
+            riskAssessmentService.recordKnownDevice(userDTO.getUsername(), ipAddress);
+
+            // 解锁账户（如果之前被锁定）
+            userService.unlockAccount(user.getId());
+
+            // 记录成功登录到数据库
+            boolean captchaWasRequired = (riskLevel != com.flowbrain.viewx.common.enums.RiskLevel.LOW);
+            securityAuditService.recordLoginAttempt(user.getId(), userDTO.getUsername(), true,
+                    null, ipAddress, userAgent, riskLevel, captchaWasRequired, captchaWasRequired);
+
             log.info("登录成功，返回200 OK响应");
             return Result.success("登录成功", responseUserDTO);
 
         } catch (org.springframework.security.authentication.DisabledException e) {
             log.warn("登录失败: 账户已被禁用，用户名: {}", userDTO.getUsername());
+            riskAssessmentService.recordLoginFailure(userDTO.getUsername(), ipAddress);
+            securityAuditService.recordLoginAttempt(null, userDTO.getUsername(), false,
+                    "账户已被禁用", ipAddress, userAgent, riskLevel, false, null);
             return Result.forbidden("账户已被禁用，请联系管理员");
         } catch (org.springframework.security.authentication.LockedException e) {
             log.warn("登录失败: 账户已被锁定，用户名: {}", userDTO.getUsername());
+            // 账户已锁定，不再记录失败次数
             return Result.forbidden("账户已被锁定，请联系管理员");
         } catch (org.springframework.security.authentication.AccountExpiredException e) {
             log.warn("登录失败: 账户已过期，用户名: {}", userDTO.getUsername());
+            riskAssessmentService.recordLoginFailure(userDTO.getUsername(), ipAddress);
             return Result.forbidden("账户已过期，请联系管理员");
         } catch (org.springframework.security.authentication.CredentialsExpiredException e) {
             log.warn("登录失败: 凭证已过期，用户名: {}", userDTO.getUsername());
+            riskAssessmentService.recordLoginFailure(userDTO.getUsername(), ipAddress);
             return Result.forbidden("凭证已过期，请重置密码");
         } catch (BadCredentialsException e) {
             log.warn("登录失败: 用户名或密码错误，用户名: {}", userDTO.getUsername());
-            return Result.badRequest("凭证无效,用户名或密码错误");
+
+            // 记录失败并检查是否需要锁定账户
+            boolean shouldLock = riskAssessmentService.recordLoginFailure(userDTO.getUsername(), ipAddress);
+
+            // 获取当前失败次数
+            int failureCount = riskAssessmentService.getLoginFailureCount(userDTO.getUsername(), ipAddress);
+            int remainingAttempts = 10 - failureCount; // 10次机会
+
+            securityAuditService.recordLoginAttempt(null, userDTO.getUsername(), false,
+                    "用户名或密码错误", ipAddress, userAgent, riskLevel, false, null);
+
+            // 如果失败次数达到10次，锁定账户
+            if (shouldLock) {
+                // 锁定用户账户
+                try {
+                    User user = userService.getUserByUsername(userDTO.getUsername());
+                    if (user != null) {
+                        userService.lockAccount(user.getId());
+                        log.warn("账户已被锁定 - 用户名: {}, 原因: 登录失败次数过多", userDTO.getUsername());
+                    }
+                } catch (Exception lockEx) {
+                    log.error("锁定账户失败", lockEx);
+                }
+                return Result.forbidden("登录失败次数过多，账户已被锁定。请重置密码或联系管理员");
+            }
+
+            // 返回错误消息，包含剩余次数
+            String message;
+            if (remainingAttempts > 5) {
+                // 剩余次数大于5次，只显示剩余次数
+                message = String.format("用户名或密码错误，还有 %d 次尝试机会", remainingAttempts);
+            } else if (remainingAttempts > 0) {
+                // 剩余次数5次或更少，提醒可以重置密码
+                message = String.format("用户名或密码错误，还有 %d 次尝试机会。如果忘记密码，可以点击\"忘记密码\"重置，否则账户会被锁定", remainingAttempts);
+            } else {
+                message = "用户名或密码错误";
+            }
+            return Result.badRequest(message);
         } catch (Exception e) {
             log.error("登录失败", e);
+            riskAssessmentService.recordLoginFailure(userDTO.getUsername(), ipAddress);
             return Result.serverError("登录过程中发生异常，请稍后再试");
         }
     }
@@ -254,5 +368,72 @@ public class AuthenticationService {
             log.error("Token验证过程中发生异常", e);
             return false;
         }
+    }
+
+    /**
+     * 邮箱验证码登录
+     * 
+     * @param userDTO   包含邮箱和验证码的用户信息
+     * @param ipAddress 客户端IP
+     * @param userAgent 用户代理
+     * @param request   HTTP请求
+     * @return 登录结果
+     */
+    private Result<UserDTO> authenticateWithEmailCode(UserDTO userDTO, String ipAddress,
+            String userAgent, jakarta.servlet.http.HttpServletRequest request) {
+        log.info("邮箱验证码登录 - 邮箱: {}", userDTO.getEmail());
+
+        // 1. 参数校验
+        if (userDTO.getEmail() == null || userDTO.getEmail().trim().isEmpty()) {
+            return Result.badRequest("邮箱不能为空");
+        }
+        if (userDTO.getVerificationCode() == null || userDTO.getVerificationCode().trim().isEmpty()) {
+            return Result.badRequest("验证码不能为空");
+        }
+
+        // 2. 验证验证码
+        Result<?> verifyResult = verifyCode(userDTO.getEmail(), userDTO.getVerificationCode());
+        if (verifyResult.getCode() != Result.OK) {
+            log.warn("邮箱验证码登录失败: 验证码错误，邮箱: {}", userDTO.getEmail());
+            return Result.badRequest("验证码错误或已过期");
+        }
+
+        // 3. 根据邮箱查找用户
+        User user = userService.getUserByEmail(userDTO.getEmail());
+        if (user == null) {
+            log.warn("邮箱验证码登录失败: 用户不存在，邮箱: {}", userDTO.getEmail());
+            return Result.notFound("该邮箱未注册");
+        }
+
+        // 4. 检查账户状态
+        if (user.getStatus() == UserStatus.DISABLED) {
+            log.warn("邮箱验证码登录失败: 账户已被禁用，邮箱: {}", userDTO.getEmail());
+            return Result.forbidden("账户已被禁用，请联系管理员");
+        }
+        if (user.getStatus() == UserStatus.LOCKED) {
+            log.warn("邮箱验证码登录失败: 账户已被锁定，邮箱: {}", userDTO.getEmail());
+            return Result.forbidden("账户已被锁定，请联系管理员");
+        }
+
+        // 5. 生成Token
+        String token = jwtUtils.generateAndStoreToken(user.getUsername());
+        log.info("邮箱验证码登录成功，生成JWT令牌，邮箱: {}, 用户名: {}", userDTO.getEmail(), user.getUsername());
+
+        // 6. 构建返回的用户信息
+        List<String> roles = List.of("ROLE_USER"); // 默认角色，可以从数据库获取
+        UserDTO responseUserDTO = new UserDTO(user.getId(), token, user.getUsername(), roles, user.getStatus());
+
+        // 7. 记录登录成功
+        riskAssessmentService.clearLoginFailure(user.getUsername(), ipAddress);
+        riskAssessmentService.recordKnownDevice(user.getUsername(), ipAddress);
+        userService.unlockAccount(user.getId());
+
+        // 记录到审计日志
+        com.flowbrain.viewx.common.enums.RiskLevel riskLevel = com.flowbrain.viewx.common.enums.RiskLevel.LOW;
+        securityAuditService.recordLoginAttempt(user.getId(), user.getUsername(), true,
+                "邮箱验证码登录", ipAddress, userAgent, riskLevel, false, false);
+
+        log.info("邮箱验证码登录成功，返回200 OK响应");
+        return Result.success("登录成功", responseUserDTO);
     }
 }

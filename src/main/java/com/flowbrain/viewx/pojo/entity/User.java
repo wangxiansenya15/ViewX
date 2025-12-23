@@ -24,7 +24,7 @@ public class User implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    @TableId(value = "id", type = IdType.AUTO)
+    @TableId(value = "id", type = IdType.ASSIGN_ID) // Use snowflake algorithm for ID generation
     private Long id;
 
     @TableField(value = "username")
@@ -40,7 +40,6 @@ public class User implements Serializable {
     private String phone;
 
     @TableField(value = "role")
-    @EnumValue
     private Role role;
 
     @TableField(value = "nickname")

@@ -256,4 +256,158 @@ public class AdminServiceImpl implements AdminService {
             log.warn("清除 trending 缓存失败: {}", e.getMessage());
         }
     }
+
+    @Override
+    public Result<com.flowbrain.viewx.pojo.vo.DashboardStatsVO> getDashboardStats() {
+        try {
+            // 1. Users
+            long totalUsers = userMapper.selectCount(new QueryWrapper<>());
+
+            // 2. Videos
+            long totalVideos = videoMapper.selectCount(new QueryWrapper<>());
+
+            // 3. Storage & Views (Aggregation)
+            QueryWrapper<Video> queryWrapper = new QueryWrapper<>();
+            queryWrapper.select("sum(file_size) as totalSize", "sum(view_count) as totalViews");
+
+            // selectMaps returns List<Map<String, Object>>
+            List<Map<String, Object>> result = videoMapper.selectMaps(queryWrapper);
+
+            long storageUsed = 0;
+            try {
+                java.nio.file.Path path = java.nio.file.Paths.get("uploads");
+                if (java.nio.file.Files.exists(path)) {
+                    // Walk file tree to sum size
+                    storageUsed = java.nio.file.Files.walk(path)
+                            .filter(p -> p.toFile().isFile())
+                            .mapToLong(p -> p.toFile().length())
+                            .sum();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to calculate storage size of uploads", e);
+            }
+
+            long totalViews = 0;
+            if (result != null && !result.isEmpty()) {
+                Map<String, Object> map = result.get(0);
+                if (map != null) {
+                    if (map.get("totalViews") != null) {
+                        Object viewsObj = map.get("totalViews");
+                        if (viewsObj instanceof Number) {
+                            totalViews = ((Number) viewsObj).longValue();
+                        }
+                    }
+                }
+            }
+
+            com.flowbrain.viewx.pojo.vo.DashboardStatsVO stats = com.flowbrain.viewx.pojo.vo.DashboardStatsVO.builder()
+                    .totalUsers(totalUsers)
+                    .userTrend(12.5) // Mock
+                    .totalVideos(totalVideos)
+                    .videoTrend(8.2) // Mock
+                    .totalViews(totalViews)
+                    .viewTrend(2.4) // Mock
+                    .storageUsed(storageUsed)
+                    .storageTrend(5.1) // Mock
+                    .build();
+
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("Failed to get dashboard stats", e);
+            return Result.serverError("获取统计数据失败");
+        }
+    }
+
+    @Override
+    @Transactional
+    public Result<Long> createUser(com.flowbrain.viewx.pojo.dto.AdminCreateUserDTO dto) {
+        try {
+            // 1. Check if username already exists
+            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("username", dto.getUsername());
+            if (userMapper.selectCount(queryWrapper) > 0) {
+                return Result.badRequest("用户名已存在");
+            }
+
+            // 2. Check if email already exists
+            if (dto.getEmail() != null && !dto.getEmail().isEmpty()) {
+                QueryWrapper<User> emailQuery = new QueryWrapper<>();
+                emailQuery.eq("email", dto.getEmail());
+                if (userMapper.selectCount(emailQuery) > 0) {
+                    return Result.badRequest("邮箱已被使用");
+                }
+            }
+
+            // 3. Create user
+            User user = new User();
+            user.setUsername(dto.getUsername());
+            user.setEmail(dto.getEmail());
+            user.setPhone(dto.getPhone());
+            user.setNickname(dto.getNickname() != null ? dto.getNickname() : dto.getUsername());
+
+            // Encrypt password
+            String encryptedPassword = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
+                    .encode(dto.getPassword() != null ? dto.getPassword() : "123456");
+            user.setPassword(encryptedPassword);
+
+            // Set role
+            com.flowbrain.viewx.common.enums.Role role = com.flowbrain.viewx.common.enums.Role.USER;
+            if (dto.getRole() != null) {
+                try {
+                    role = com.flowbrain.viewx.common.enums.Role.valueOf(dto.getRole());
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid role: {}, using default USER", dto.getRole());
+                }
+            }
+            user.setRole(role);
+
+            // Set account status (all enabled by default)
+            user.setEnabled(true);
+            user.setAccountNonExpired(true);
+            user.setAccountNonLocked(true);
+            user.setCredentialsNonExpired(true);
+
+            userMapper.insert(user);
+
+            // 4. Create user detail record
+            UserDetail detail = new UserDetail();
+            detail.setUserId(user.getId());
+            userDetailMapper.insert(detail);
+
+            log.info("管理员创建用户成功，用户ID: {}, 用户名: {}", user.getId(), user.getUsername());
+            return Result.success(user.getId());
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.error("创建用户失败 - 数据完整性违规: {}", e.getMessage());
+            // Check for common constraint violations
+            if (e.getMessage().contains("username")) {
+                return Result.badRequest("用户名已存在或格式不正确");
+            } else if (e.getMessage().contains("email")) {
+                return Result.badRequest("邮箱已存在或格式不正确");
+            }
+            return Result.badRequest("创建用户失败，请检查输入数据");
+        } catch (Exception e) {
+            log.error("创建用户失败", e);
+            return Result.serverError("创建用户失败，请稍后重试");
+        }
+    }
+
+    @Override
+    @Transactional
+    public Result<String> deleteUser(Long userId) {
+        try {
+            User user = userMapper.selectById(userId);
+            if (user == null) {
+                return Result.notFound("用户不存在");
+            }
+
+            // Soft delete
+            userMapper.deleteById(userId);
+
+            log.info("管理员删除用户成功，用户ID: {}, 用户名: {}", userId, user.getUsername());
+            return Result.success("用户已删除");
+        } catch (Exception e) {
+            log.error("删除用户失败，用户ID: {}", userId, e);
+            return Result.serverError("删除用户失败，请稍后重试");
+        }
+    }
 }

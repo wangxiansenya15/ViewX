@@ -59,19 +59,4 @@ CREATE TABLE vx_contents (
     deleted_at TIMESTAMP
 );
 
--- 创建索引
-CREATE INDEX idx_contents_uploader ON vx_contents(uploader_id);
-CREATE INDEX idx_contents_type ON vx_contents(content_type);
-CREATE INDEX idx_contents_category ON vx_contents(category);
-CREATE INDEX idx_contents_created_at ON vx_contents(created_at DESC);
-CREATE INDEX idx_contents_status ON vx_contents(status);
-CREATE INDEX idx_contents_ai_tags ON vx_contents USING GIN (ai_tags);
-CREATE INDEX idx_contents_embedding ON vx_contents USING ivfflat (content_embedding vector_cosine_ops);
-CREATE INDEX idx_contents_trending ON vx_contents (created_at DESC, view_count DESC) WHERE status = 'APPROVED';
-
--- 注释
-COMMENT ON TABLE vx_contents IS '内容表 - 支持视频、图片、图片集等多种内容类型';
-COMMENT ON COLUMN vx_contents.content_type IS '内容类型: VIDEO(视频), IMAGE(单图), IMAGE_SET(图片集), ARTICLE(文章)';
-COMMENT ON COLUMN vx_contents.primary_url IS '主要媒体URL - 视频为视频URL,图片为主图片URL';
-COMMENT ON COLUMN vx_contents.media_urls IS '多媒体URL数组 - 用于图片集,存储多张图片的URL';
-COMMENT ON COLUMN vx_contents.duration IS '视频时长(秒) - 仅视频类型使用,图片类型为NULL';
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理

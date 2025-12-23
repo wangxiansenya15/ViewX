@@ -13,17 +13,24 @@ public class UserDTO {
     // 安全相关字段
     private String password;
     private String token;
-    
+
+    // 邮箱验证码登录字段
+    private String email;
+    private String verificationCode;
+
     // 权限控制字段
     private List<String> roles;
     private List<String> permissions;
-    
+
     // 业务扩展字段
     private String avatar;
     private Integer memberLevel;
-    
+
     // 用户状态相关字段
     private UserStatus userStatus;
+
+    // 人机验证 token
+    private String captchaToken;
 
     public UserDTO() {
     }
@@ -37,9 +44,9 @@ public class UserDTO {
         this.username = username;
         this.roles = roles;
     }
-    
+
     // 包含用户状态信息的构造函数
-    public UserDTO(Long id,String token, String username, List<String> roles, UserStatus userStatus) {
+    public UserDTO(Long id, String token, String username, List<String> roles, UserStatus userStatus) {
         this.id = id;
         this.token = token;
         this.username = username;

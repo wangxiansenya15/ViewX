@@ -57,6 +57,7 @@ public class SecurityConfig {
                                 "/email/**",
                                 "/store/**",
                                 "/system/**",
+                                "/captcha/**", // 允许访问人机验证接口
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -76,7 +77,8 @@ public class SecurityConfig {
                         // 角色权限控制
                         .requestMatchers("/comments/**", "/user/**", "/avatar/**", "/payment/**", "/msg/**",
                                 "/videos/**", "/interactions/**", "/notifications/**", "/messages/**")
-                        .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER")
+                        .hasAnyRole("SUPER_ADMIN", "ADMIN", "USER", "REVIEWER")
+                        .requestMatchers("/actuator/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         .requestMatchers("/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                         // 其他请求需要认证
                         .anyRequest().authenticated())

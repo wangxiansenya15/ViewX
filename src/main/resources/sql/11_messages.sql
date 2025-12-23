@@ -20,13 +20,7 @@ CREATE TABLE vx_messages (
     CONSTRAINT check_different_users CHECK (sender_id != receiver_id)
 );
 
--- 索引
-CREATE INDEX idx_messages_sender ON vx_messages(sender_id, created_at DESC);
-CREATE INDEX idx_messages_receiver ON vx_messages(receiver_id, created_at DESC);
-CREATE INDEX idx_messages_conversation ON vx_messages(sender_id, receiver_id, created_at DESC);
-CREATE INDEX idx_messages_unread ON vx_messages(receiver_id, is_read) WHERE is_read = FALSE;
-CREATE INDEX idx_messages_is_deleted ON vx_messages(is_deleted);
-CREATE INDEX idx_messages_is_recalled ON vx_messages(is_recalled);
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理
 
 -- 字段注释
 COMMENT ON COLUMN vx_messages.is_recalled IS '是否已撤回';
@@ -50,10 +44,7 @@ CREATE TABLE vx_conversations (
     CONSTRAINT unique_conversation UNIQUE (user1_id, user2_id)
 );
 
--- 索引
-CREATE INDEX idx_conversations_user1 ON vx_conversations(user1_id, last_message_time DESC);
-CREATE INDEX idx_conversations_user2 ON vx_conversations(user2_id, last_message_time DESC);
-CREATE INDEX idx_conversations_last_message ON vx_conversations(last_message_time DESC);
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理
 
 -- 在线状态表（可选，也可以用 Redis）
 CREATE TABLE vx_user_online_status (
@@ -63,7 +54,7 @@ CREATE TABLE vx_user_online_status (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_online_status ON vx_user_online_status(is_online, last_seen DESC);
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理
 
 -- 触发器：自动更新 updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()

@@ -30,12 +30,8 @@ CREATE TABLE vx_users (
                        CONSTRAINT valid_email CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
 
- -- 索引
-CREATE INDEX idx_users_username ON vx_users(username);
-CREATE INDEX idx_users_email ON vx_users(email);
-CREATE INDEX idx_users_created_at ON vx_users(created_at DESC);
-CREATE INDEX idx_users_role ON vx_users(role);
-CREATE INDEX idx_users_status ON vx_users(enabled, account_non_expired, account_non_locked, credentials_non_expired);
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理
+-- 请在创建表后执行该文件以创建所有优化索引
 
 
 -- 用户详情表
@@ -71,7 +67,4 @@ CREATE TABLE vx_user_details (
                               UNIQUE(user_id)
 );
 
-CREATE INDEX idx_user_details_user_id ON vx_user_details(user_id);
-
-
-
+-- 注释：索引已移至 13_indexes_optimization.sql 统一管理
