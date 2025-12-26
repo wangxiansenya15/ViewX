@@ -124,3 +124,16 @@ captcha:
   type: turnstile
   site-key: 0x4AAAAAACHtJ4y-Bcn20Hjf
   secret-key: 0x4AAAAAACHtJwgeTinozz8z3v3_vjFa7rw
+
+# FFmpeg 执行器配置 - 开发环境
+ffmpeg:
+  executor:
+    type: docker  # 开发环境使用Docker方式，保证环境一致性
+  performance:
+    max-concurrent-tasks: 1      # 最大并发任务数（低内存环境，同时只处理1个视频）
+    threads: 2                   # FFmpeg线程数限制（降低CPU占用）
+    low-memory-mode: true        # 启用低内存模式
+    timeout-seconds: 300         # 超时时间（5分钟）
+    max-resolution-width: 1280   # 最大分辨率宽度（720p）
+    max-resolution-height: 720   # 最大分辨率高度
+    max-bitrate: 2000            # 最大码率（2Mbps）

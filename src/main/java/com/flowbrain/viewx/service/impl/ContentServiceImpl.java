@@ -12,6 +12,7 @@ import com.flowbrain.viewx.service.ContentService;
 import com.flowbrain.viewx.service.InteractionService;
 import com.flowbrain.viewx.service.TopicService;
 import com.flowbrain.viewx.service.VideoProcessingService;
+import com.flowbrain.viewx.util.FilePathUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,45 +63,16 @@ public class ContentServiceImpl implements ContentService {
                 return Result.badRequest("图片大小不能超过10MB");
             }
 
-            // 1. 上传原始图片
-            String originalFilename = imageFile.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".")
-                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : ".jpg";
-
-            String filename = "image_" + userId + "_" + System.currentTimeMillis() + extension;
-            String imagePath = "images/" + filename;
-            String storedFilename = storageStrategy.storeFile(imageFile, imagePath);
-            String imageUrl = storageStrategy.getFileUrl(storedFilename);
-
-            // 2. 生成缩略图
-            String thumbnailUrl = imageUrl; // 默认使用原图
-            try {
-                byte[] thumbnailBytes = videoProcessingService.generateThumbnailFromCover(imageFile);
-                String thumbnailFilename = "images/thumbnails/thumb_" + userId + "_" + System.currentTimeMillis()
-                        + ".jpg";
-                String storedThumbnailFilename = storageStrategy.storeFile(
-                        new java.io.ByteArrayInputStream(thumbnailBytes),
-                        thumbnailFilename);
-                thumbnailUrl = storageStrategy.getFileUrl(storedThumbnailFilename);
-                log.info("成功生成图片缩略图: {}", thumbnailUrl);
-            } catch (Exception e) {
-                log.warn("缩略图生成失败，使用原图: {}", e.getMessage());
-            }
-
-            // 3. 创建内容记录
+            // 1. 先创建内容记录以获取contentId
             Content content = new Content();
             content.setContentType("IMAGE");
             content.setTitle(dto.getTitle());
             content.setDescription(dto.getDescription());
-            content.setPrimaryUrl(imageUrl);
-            content.setCoverUrl(imageUrl); // 图片内容的封面就是图片本身
-            content.setThumbnailUrl(thumbnailUrl);
             content.setUploaderId(userId);
             content.setCategory(dto.getCategory());
             content.setSubcategory(dto.getSubcategory());
             content.setVisibility(dto.getVisibility());
-            content.setStatus("APPROVED"); // 图片默认审核通过
+            content.setStatus("APPROVED");
             content.setCreatedAt(LocalDateTime.now());
             content.setUpdatedAt(LocalDateTime.now());
             content.setPublishedAt(LocalDateTime.now());
@@ -110,12 +82,35 @@ public class ContentServiceImpl implements ContentService {
             }
 
             contentMapper.insert(content);
-            log.info("用户 {} 上传图片成功，ID: {}, URL: {}", userId, content.getId(), imageUrl);
+            Long contentId = content.getId();
 
-            // 4. 提取并关联话题
-            extractAndAssociateTopics(content.getId(), dto.getTitle(), dto.getDescription());
+            // 2. 使用FilePathUtil生成图片路径
+            String extension = FilePathUtil.extractExtension(imageFile.getOriginalFilename());
+            if (extension.isEmpty()) {
+                extension = ".jpg";
+            }
 
-            return Result.success(content.getId());
+            String imagePath = FilePathUtil.generatePostImagePath(userId, contentId, 1, extension);
+            String storedFilename = storageStrategy.storeFile(imageFile, imagePath);
+            String imageUrl = storageStrategy.getFileUrl(storedFilename);
+
+            log.info("图片已上传: userId={}, contentId={}, path={}", userId, contentId, imagePath);
+
+            // 3. 生成缩略图（可选）
+            String thumbnailUrl = imageUrl; // 默认使用原图
+
+            // 4. 更新内容记录
+            content.setPrimaryUrl(imageUrl);
+            content.setCoverUrl(imageUrl);
+            content.setThumbnailUrl(thumbnailUrl);
+            contentMapper.updateById(content);
+
+            log.info("用户 {} 上传图片成功，ID: {}, path: {}", userId, contentId, imagePath);
+
+            // 5. 提取并关联话题
+            extractAndAssociateTopics(contentId, dto.getTitle(), dto.getDescription());
+
+            return Result.success(contentId);
 
         } catch (Exception e) {
             log.error("图片上传失败", e);
@@ -145,47 +140,11 @@ public class ContentServiceImpl implements ContentService {
                 }
             }
 
-            // 1. 上传所有图片
-            List<String> imageUrls = new ArrayList<>();
-            for (int i = 0; i < imageFiles.size(); i++) {
-                MultipartFile file = imageFiles.get(i);
-                String originalFilename = file.getOriginalFilename();
-                String extension = originalFilename != null && originalFilename.contains(".")
-                        ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                        : ".jpg";
-
-                String filename = "imageset_" + userId + "_" + System.currentTimeMillis() + "_" + i + extension;
-                String imagePath = "images/sets/" + filename;
-                String storedFilename = storageStrategy.storeFile(file, imagePath);
-                String imageUrl = storageStrategy.getFileUrl(storedFilename);
-                imageUrls.add(imageUrl);
-            }
-
-            // 2. 使用第一张图片生成封面和缩略图
-            String coverUrl = imageUrls.get(0);
-            String thumbnailUrl = coverUrl;
-            try {
-                byte[] thumbnailBytes = videoProcessingService.generateThumbnailFromCover(imageFiles.get(0));
-                String thumbnailFilename = "images/thumbnails/thumb_set_" + userId + "_" + System.currentTimeMillis()
-                        + ".jpg";
-                String storedThumbnailFilename = storageStrategy.storeFile(
-                        new java.io.ByteArrayInputStream(thumbnailBytes),
-                        thumbnailFilename);
-                thumbnailUrl = storageStrategy.getFileUrl(storedThumbnailFilename);
-                log.info("成功生成图片集缩略图: {}", thumbnailUrl);
-            } catch (Exception e) {
-                log.warn("缩略图生成失败，使用第一张图片: {}", e.getMessage());
-            }
-
-            // 3. 创建内容记录
+            // 1. 先创建内容记录以获取contentId
             Content content = new Content();
             content.setContentType("IMAGE_SET");
             content.setTitle(dto.getTitle());
             content.setDescription(dto.getDescription());
-            content.setPrimaryUrl(imageUrls.get(0)); // 第一张图片作为主图
-            content.setMediaUrls(imageUrls); // 所有图片URL
-            content.setCoverUrl(coverUrl);
-            content.setThumbnailUrl(thumbnailUrl);
             content.setUploaderId(userId);
             content.setCategory(dto.getCategory());
             content.setSubcategory(dto.getSubcategory());
@@ -200,12 +159,42 @@ public class ContentServiceImpl implements ContentService {
             }
 
             contentMapper.insert(content);
-            log.info("用户 {} 上传图片集成功，ID: {}, 图片数: {}", userId, content.getId(), imageUrls.size());
+            Long contentId = content.getId();
 
-            // 4. 提取并关联话题
-            extractAndAssociateTopics(content.getId(), dto.getTitle(), dto.getDescription());
+            // 2. 使用FilePathUtil上传所有图片
+            List<String> imageUrls = new ArrayList<>();
+            for (int i = 0; i < imageFiles.size(); i++) {
+                MultipartFile file = imageFiles.get(i);
+                String extension = FilePathUtil.extractExtension(file.getOriginalFilename());
+                if (extension.isEmpty()) {
+                    extension = ".jpg";
+                }
 
-            return Result.success(content.getId());
+                String imagePath = FilePathUtil.generatePostImagePath(userId, contentId, i + 1, extension);
+                String storedFilename = storageStrategy.storeFile(file, imagePath);
+                String imageUrl = storageStrategy.getFileUrl(storedFilename);
+                imageUrls.add(imageUrl);
+
+                log.info("图片集第{}张已上传: path={}", i + 1, imagePath);
+            }
+
+            // 3. 使用第一张图片作为封面和缩略图
+            String coverUrl = imageUrls.get(0);
+            String thumbnailUrl = coverUrl;
+
+            // 4. 更新内容记录
+            content.setPrimaryUrl(imageUrls.get(0));
+            content.setMediaUrls(imageUrls);
+            content.setCoverUrl(coverUrl);
+            content.setThumbnailUrl(thumbnailUrl);
+            contentMapper.updateById(content);
+
+            log.info("用户 {} 上传图片集成功，ID: {}, 图片数: {}", userId, contentId, imageUrls.size());
+
+            // 5. 提取并关联话题
+            extractAndAssociateTopics(contentId, dto.getTitle(), dto.getDescription());
+
+            return Result.success(contentId);
 
         } catch (Exception e) {
             log.error("图片集上传失败", e);

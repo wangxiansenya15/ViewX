@@ -119,3 +119,18 @@ logging:
     name: /var/log/viewx/application.log
     max-size: 100MB
     max-history: 30
+
+# FFmpeg 执行器配置 - 生产环境
+ffmpeg:
+  executor:
+    type: native  # 生产环境使用原生方式，性能最佳
+  binary:
+    path: /usr/bin/ffmpeg  # FFmpeg二进制文件路径
+  performance:
+    max-concurrent-tasks: 1      # 最大并发任务数（低内存环境，同时只处理1个视频）
+    threads: 2                   # FFmpeg线程数限制（降低CPU占用）
+    low-memory-mode: true        # 启用低内存模式
+    timeout-seconds: 300         # 超时时间（5分钟）
+    max-resolution-width: 1280   # 最大分辨率宽度（720p）
+    max-resolution-height: 720   # 最大分辨率高度
+    max-bitrate: 2000            # 最大码率（2Mbps）

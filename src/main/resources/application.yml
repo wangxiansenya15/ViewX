@@ -11,10 +11,10 @@ server:
 # ViewX 自定义配置
 viewx:
   thread-pool:
-    core-pool-size: 4
-    max-pool-size: 10
-    queue-capacity: 200
-    keep-alive-seconds: 60
+    core-pool-size: 2        # 核心线程数（降低到2，节省内存）
+    max-pool-size: 4         # 最大线程数（降低到4，避免OOM）
+    queue-capacity: 100      # 队列容量（降低到100，减少内存占用）
+    keep-alive-seconds: 30   # 空闲线程存活时间（降低到30秒，快速回收）
     thread-name-prefix: "viewx-async-"
 
 # 应用版本配置

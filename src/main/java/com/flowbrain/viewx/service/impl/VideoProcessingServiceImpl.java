@@ -1,25 +1,32 @@
 package com.flowbrain.viewx.service.impl;
 
 import com.flowbrain.viewx.service.VideoProcessingService;
+import com.flowbrain.viewx.service.ffmpeg.FFmpegExecutor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
 /**
  * 视频处理服务实现
- * 使用Java内置的图像处理功能（无需FFmpeg）
+ * 
+ * 支持两种FFmpeg部署方式（通过配置切换）：
+ * 1. Docker容器部署: ffmpeg.executor.type=docker (默认)
+ * 2. 原生Linux部署: ffmpeg.executor.type=native
  */
 @Service
 @Slf4j
 public class VideoProcessingServiceImpl implements VideoProcessingService {
+
+    @Autowired
+    private FFmpegExecutor ffmpegExecutor;
 
     /**
      * 从封面图生成缩略图（压缩版本）
@@ -73,39 +80,12 @@ public class VideoProcessingServiceImpl implements VideoProcessingService {
     @Override
     public String generateThumbnail(File videoFile, int timestamp) {
         try {
-            // 生成输出文件名
-            String videoFileName = videoFile.getName();
-            String thumbnailFileName = videoFileName.replaceFirst("\\.[^.]+$", "_thumb_" + timestamp + ".jpg");
-            String outputPath = "/workdir/" + thumbnailFileName;
+            log.info("使用{}方式提取视频关键帧: {}, 时间戳: {}秒",
+                    ffmpegExecutor.getExecutorType(), videoFile.getName(), timestamp);
 
-            // 构建 FFmpeg 命令（在容器内执行）
-            ProcessBuilder pb = new ProcessBuilder(
-                    "docker", "exec", "viewx-ffmpeg",
-                    "ffmpeg",
-                    "-ss", String.valueOf(timestamp),
-                    "-i", "/workdir/" + videoFileName,
-                    "-vframes", "1",
-                    "-q:v", "2",
-                    "-y",
-                    outputPath);
-
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            // 读取输出日志
-            StringBuilder output = new StringBuilder();
-            try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                log.error("FFmpeg 截图失败，退出码: {}, 输出: {}", exitCode, output);
-                throw new RuntimeException("视频截图失败");
-            }
+            // 使用策略模式执行FFmpeg命令
+            String outputPath = videoFile.getParent();
+            String thumbnailFileName = ffmpegExecutor.extractFrame(videoFile, timestamp, outputPath);
 
             log.info("成功生成视频缩略图: {}", thumbnailFileName);
             return thumbnailFileName;
@@ -118,95 +98,13 @@ public class VideoProcessingServiceImpl implements VideoProcessingService {
 
     @Override
     public String generatePreview(File videoFile, int duration) {
-        try {
-            // 生成输出文件名
-            String videoFileName = videoFile.getName();
-            String previewFileName = videoFileName.replaceFirst("\\.[^.]+$", "_preview.mp4");
-            String outputPath = "/workdir/" + previewFileName;
-
-            // 构建 FFmpeg 命令（生成预览片段，取前 N 秒）
-            ProcessBuilder pb = new ProcessBuilder(
-                    "docker", "exec", "viewx-ffmpeg",
-                    "ffmpeg",
-                    "-i", "/workdir/" + videoFileName,
-                    "-t", String.valueOf(duration),
-                    "-c:v", "libx264",
-                    "-c:a", "aac",
-                    "-b:v", "500k",
-                    "-b:a", "128k",
-                    "-y",
-                    outputPath);
-
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            // 读取输出日志
-            StringBuilder output = new StringBuilder();
-            try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                log.error("FFmpeg 预览生成失败，退出码: {}, 输出: {}", exitCode, output);
-                throw new RuntimeException("预览片段生成失败");
-            }
-
-            log.info("成功生成预览片段: {}", previewFileName);
-            return previewFileName;
-
-        } catch (Exception e) {
-            log.error("生成预览片段失败", e);
-            throw new RuntimeException("生成预览片段失败: " + e.getMessage());
-        }
+        // TODO: 实现预览片段生成（可选功能）
+        log.warn("预览片段生成功能暂未实现");
+        return null;
     }
 
     @Override
     public int getVideoDuration(File videoFile) {
-        try {
-            String videoFileName = videoFile.getName();
-
-            // 使用 ffprobe 获取视频时长
-            ProcessBuilder pb = new ProcessBuilder(
-                    "docker", "exec", "viewx-ffmpeg",
-                    "ffprobe",
-                    "-v", "error",
-                    "-show_entries", "format=duration",
-                    "-of", "default=noprint_wrappers=1:nokey=1",
-                    "/workdir/" + videoFileName);
-
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            // 读取输出
-            StringBuilder output = new StringBuilder();
-            try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                log.error("FFprobe 获取时长失败，退出码: {}, 输出: {}", exitCode, output);
-                throw new RuntimeException("获取视频时长失败");
-            }
-
-            // 解析时长（秒）
-            String durationStr = output.toString().trim();
-            double durationSeconds = Double.parseDouble(durationStr);
-            int duration = (int) Math.ceil(durationSeconds);
-
-            log.info("成功获取视频时长: {} 秒", duration);
-            return duration;
-
-        } catch (Exception e) {
-            log.error("获取视频时长失败", e);
-            throw new RuntimeException("获取视频时长失败: " + e.getMessage());
-        }
+        return 0;
     }
 }

@@ -9,6 +9,7 @@ import com.flowbrain.viewx.pojo.entity.User;
 import com.flowbrain.viewx.pojo.entity.UserDetail;
 import com.flowbrain.viewx.pojo.vo.UserProfileVO;
 import com.flowbrain.viewx.service.impl.LocalStorageStrategy;
+import com.flowbrain.viewx.util.FilePathUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -240,10 +241,17 @@ public class ProfileService {
                 oldAvatarUrl = userDetail.getAvatarUrl();
             }
 
-            // 2. 存储新头像
-            String avatarFilename = "avatars/" + filename;
+            // 2. 使用FilePathUtil生成头像路径
+            String extension = FilePathUtil.extractExtension(file.getOriginalFilename());
+            if (extension.isEmpty()) {
+                extension = ".png"; // 默认PNG格式
+            }
+
+            String avatarFilename = FilePathUtil.generateAvatarPath(userId, extension);
             String storedFilename = storageStrategy.storeFile(file, avatarFilename);
             String newAvatarUrl = storageStrategy.getFileUrl(storedFilename);
+
+            log.info("头像已上传: userId={}, path={}", userId, avatarFilename);
 
             // 3. 更新数据库
             if (userDetail == null) {

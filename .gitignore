@@ -47,7 +47,7 @@ uploads
 ### system ignore ###
 .DS_Store
 Thumbs.db
-.env
+#.env
 .agent
 
 ### personal config ###
