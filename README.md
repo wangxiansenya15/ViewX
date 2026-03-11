@@ -4,6 +4,16 @@
 > 
 > 后端基于 **Spring Boot 3 + Spring Security + PostgreSQL + Redis + RabbitMQ** 构建，强调清晰架构、流畅交互和智能推荐。
 
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.4.x-brightgreen" alt="Spring Boot">
+  <img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D" alt="Vue.js">
+  <img src="https://img.shields.io/badge/PostgreSQL-16-336791" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Redis-7.x-DC382D" alt="Redis">
+  <img src="https://img.shields.io/badge/License-MIT-blue" alt="License">
+</p>
+
+
 ---
 
 ## 🚀 项目亮点
@@ -60,7 +70,7 @@ graph TD
 
 ## ⚙️ 核心功能模块
 
-### 1. 🔐 用户系统（已完成 90%）
+### 1. 🔐 用户系统（已完成 100%）
 - ✅ 邮箱 + 密码注册登录
 - ✅ JWT 鉴权 + Token 黑名单
 - ✅ OAuth2（GitHub 登录）
@@ -68,14 +78,14 @@ graph TD
 - ✅ 头像上传（本地存储）
 - ✅ 角色权限控制
 
-### 2. 📹 视频系统（开发中 60%）
+### 2. 📹 视频系统（开发中 100%）
 - ✅ 视频数据模型设计
 - ✅ 视频 DTO/VO 定义
-- 🚧 视频上传接口
-- 🚧 FFmpeg 转码
-- 🚧 HLS 视频播放
+- ✅ 视频上传接口
+- ✅ FFmpeg 转码
+- ✅ HLS 视频播放
 
-### 3. 💬 社交互动（已完成 85%）
+### 3. 💬 社交互动（已完成 100%）
 - ✅ 点赞、收藏（Redis 计数器）
 - ✅ 评论系统（数据模型）
 - ✅ 异步行为日志
